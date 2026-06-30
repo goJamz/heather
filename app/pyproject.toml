@@ -1,0 +1,16 @@
+[project]
+name = "heather"
+version = "0.1.0"
+description = "A deterministic GitLab synchronization app for ADOC Vantage issue data."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "azure-identity>=1.25.3",
+    "foundry-platform-sdk>=2.0.0",
+    "langchain>=1.3.4",
+    "langchain-openai>=1.2.2",
+    "pandas>=2.3.0",
+    "pyarrow>=20.0.0",
+    "python-gitlab>=8.4.0",
+    "requests>=2.32.0",
+]

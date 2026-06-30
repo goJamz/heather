@@ -1,0 +1,23 @@
+---
+stages:
+  - pre-test
+  - deliver
+
+heather-lint:
+  stage: pre-test
+  image: registry.cdso.army.mil/cdso/containers/approved-base/python_alpine:3.14
+  script:
+    - pip install black
+    - black --check .
+
+#heather-library:
+#  stage: deliver
+#  image: registry.cdso.army.mil/cdso/containers/approved-base/python_alpine:3.14
+#  rules:
+#  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+#  variables:
+#    CURL_CA_BUNDLE: /usr/local/share/ca-certificates/dod.crt
+#  script:
+#    - pip install build twine
+#    - python -m build
+#    - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
