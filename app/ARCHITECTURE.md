@@ -32,8 +32,12 @@ heather/main.py
         -> read Vantage gl-issues rows
         -> for each source row:
             -> sync.issues.find_gitlab_issue_by_external_key()
-            -> create or update GitLab issue
-            -> sync.labels.reconcile_gitlab_issue_labels()
+            -> if missing:
+                -> sync.issues.create_gitlab_issue()
+                    -> sync.labels.build_gitlab_issue_labels()
+            -> if existing:
+                -> refresh managed description block when needed
+                -> sync.labels.reconcile_gitlab_issue_labels()
             -> sync.notes.sync_source_comment_note()
             -> sync.rows.build_state_row()
             -> sync.rows.build_comment_rows()
@@ -98,7 +102,7 @@ variable reading belongs near the behavior that uses it.
 
 ### `heather/__init__.py`
 
-Package marker. It does not define app behavior.
+Package marker and optional module docstring. It does not define app behavior.
 
 ## Sync Modules
 
@@ -199,8 +203,8 @@ changes, update `constants.py` and the corresponding row builder together.
 
 ### `sync/__init__.py`
 
-Package marker for sync modules. It does not re-export the workflow API.
-Import `run_heather` from `sync.run`.
+Package marker and module docstring for sync modules. It does not re-export the
+workflow API. Import `run_heather` from `sync.run`.
 
 ## Description Modules
 
@@ -245,6 +249,7 @@ Responsibilities:
 
 - define fields that do not trigger description refreshes
 - define `SOURCE_RENDER_FORMAT_VERSION`
+- normalize source values before hashing
 - build the managed-description source content hash
 - build the source-comment note hash
 - decide whether an existing managed block needs refresh
@@ -343,14 +348,15 @@ Responsibilities:
 - build the source comment digest prompt
 - call the Azure OpenAI model
 - format optional markdown sections returned by the model
-- fail closed by printing a warning and returning an empty string on AI errors
+- degrade gracefully by printing a warning and returning an empty string on AI
+  errors
 
 AI output is supplemental. It should not change source-owned fields or workflow
 decisions.
 
 ### `tools/__init__.py`
 
-Package marker. It does not define app behavior.
+Package marker and optional module docstring. It does not define app behavior.
 
 ## Model Modules
 
@@ -368,7 +374,7 @@ This module is only needed when optional AI hooks are enabled.
 
 ### `models/__init__.py`
 
-Package marker. It does not define app behavior.
+Package marker and optional module docstring. It does not define app behavior.
 
 ## Data Ownership Boundaries
 
