@@ -7,6 +7,11 @@ user comments back to Heather-owned Vantage snapshot datasets.
 Heather is not Gandalf. It does not create lessons learned, recommendations,
 EXSUMs, white papers, assignments, workflow movement, or closure decisions.
 
+## Maintainer Architecture
+
+For a file-by-file module map and orchestration notes, see
+[`ARCHITECTURE.md`](ARCHITECTURE.md).
+
 ## Data Flow
 
 ```text
