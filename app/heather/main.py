@@ -2,7 +2,7 @@
 from argparse import ArgumentParser
 
 # Local imports.
-from agents.heather import run_heather
+from sync.run import run_heather
 
 
 def main():
