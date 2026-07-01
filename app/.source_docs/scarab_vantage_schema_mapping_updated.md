@@ -725,7 +725,9 @@ T.StructType([
 
 ### 15.1 Purpose
 
-`aar-data` stores After Action Report fields associated with a ticket. It is a one-row-per-ticket source table used by the `gl-issues` transform to append structured AAR columns to the GitLab-ready output.
+`aar-data` stores current MCSC/SPEAR After Action Report fields associated with a ticket. It is a one-row-per-ticket source table used by the `gl-issues` transform to append structured AAR columns to the GitLab-ready output.
+
+These columns represent source-field transcription into the data layer. They are not AI-generated AAR text, and they should not be treated as a Heather-authored summary.
 
 ### 15.2 Current source behavior
 
@@ -763,7 +765,7 @@ T.StructType([
 
 The `gl-issues` transform appends the seven AAR output columns as columns 40-46. The original 39 columns remain unchanged in name, type, and order.
 
-`INCLUDE_AAR_IN_CONTENT_HASH` currently defaults to `False`, so AAR fields are not part of `content_hash`. This is the safe rollout state because Heather has not yet been updated to render AAR fields in GitLab. When Heather rendering is ready, the transform switch can be changed to `True` as part of a coordinated deployment.
+`INCLUDE_AAR_IN_CONTENT_HASH` currently defaults to `False`, so AAR fields are not part of `content_hash`. This is the safe rollout state because Heather has not yet been updated to render AAR fields in GitLab. When Heather rendering is ready, the transform switch can be changed to `True` as part of a coordinated deployment. That future Heather rendering should faithfully display these structured source fields; any AI-generated lesson, recommendation, EXSUM, white paper, or synthesized AAR content belongs downstream in the Gandalf knowledge workflow.
 
 ---
 
@@ -956,4 +958,3 @@ The important updates from the previous mapping document are:
 8. `gl-issues` now has 46 columns total: 37 original columns, 2 status-history JSON columns, and 7 AAR columns.
 9. The status-history JSON arrays are deterministically sorted by date, with same-day tiebreaks by status and notes because no source sequence/timestamp exists yet.
 10. Intake interviews, tech interviews, and implementation team rows are still not present in the current active Vantage schema export.
-

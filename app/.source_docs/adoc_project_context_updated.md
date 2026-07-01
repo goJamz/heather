@@ -189,7 +189,9 @@ The AAR source is `aar-data`, located at:
 /Army_NIPR/ADOC/data/tickets/aar-data
 ```
 
-AAR fields are available in `gl-issues`, but Heather has not been changed to render them yet. `INCLUDE_AAR_IN_CONTENT_HASH` is set to `False` for the safe initial rollout, and the new status-history/AAR columns are excluded from `content_hash` to avoid unnecessary Heather/GitLab update churn.
+AAR fields are current MCSC/SPEAR source fields. They are available in `gl-issues`, but Heather has not been changed to render them yet. When Heather is updated, her responsibility is to faithfully render those source fields into the Heather-managed GitLab issue description. Heather should not use AI to invent, summarize, or author an AAR from those fields.
+
+`INCLUDE_AAR_IN_CONTENT_HASH` is set to `False` for the safe initial rollout, and the new status-history/AAR columns are excluded from `content_hash` to avoid unnecessary Heather/GitLab update churn.
 
 ---
 
@@ -385,11 +387,11 @@ The exact final label set that triggers Gandalf still needs to be documented.
 
 Human review gates are required to preserve accuracy, security, quality, and accountability.
 
-### 9.3 AAR Auto-Population Note
+### 9.3 AAR Source-Field Rendering Note
 
-AAR source fields are now present in the transformed `gl-issues` table. They are structured data fields, not rendered GitLab markdown. Heather must be updated separately before AAR content appears in the Heather-managed GitLab issue description. Once Heather can render the AAR section, the transform switch `INCLUDE_AAR_IN_CONTENT_HASH` can be changed to `True` as part of a coordinated deployment.
+AAR source fields are now present in the transformed `gl-issues` table because those fields exist in MCSC/SPEAR. They are structured source data fields, not AI-generated AAR text and not rendered GitLab markdown. Heather must be updated separately before AAR source fields appear in the Heather-managed GitLab issue description. Once Heather can render the AAR section, the transform switch `INCLUDE_AAR_IN_CONTENT_HASH` can be changed to `True` as part of a coordinated deployment.
 
-Gandalf can use high-quality closed GitLab issues, AAR-relevant comments, and future rendered AAR sections to create lessons learned, recommendations, EXSUMs, and white-paper content.
+Gandalf can later use high-quality closed GitLab issues, AAR-relevant comments, and rendered AAR source fields to create lessons learned, recommendations, EXSUMs, and white-paper content. That downstream knowledge generation is separate from Heather's source-field sync role.
 
 ---
 
@@ -410,6 +412,7 @@ Meeting notes
 Compliance references
 Implementation notes
 Validation evidence
+AAR source fields when Heather rendering supports them
 AAR-relevant comments
 ```
 
@@ -419,7 +422,7 @@ AAR-relevant comments
 
 Once a GitLab issue is closed and has the relevant human-managed labels, Gandalf starts the automated knowledge-management pipeline.
 
-AAR flow:
+Knowledge-management flow:
 
 ```text
 Closed GitLab issue with correct human-managed labels
