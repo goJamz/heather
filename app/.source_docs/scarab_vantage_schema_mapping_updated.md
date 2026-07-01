@@ -2,7 +2,7 @@
 
 **Project:** ADOC / Scarab  
 **Document purpose:** Source-to-target mapping for Scarab SPEAR scraper outputs and the Vantage datasets they populate.  
-**Last updated:** 2026-06-26  
+**Last updated:** 2026-07-01  
 **Scope:** Current Scarab scraper outputs, current Vantage datasets, current Vantage schemas, and known field-coverage observations.
 
 ---
@@ -48,6 +48,7 @@ tech-eval-data.csv
 tech-eval-status-update-data.csv
 implementation-data.csv
 implementation-status-update-data.csv
+aar-data.csv
 ```
 
 ---
@@ -132,6 +133,9 @@ TECH_EVAL_DATA_RID
 TECH_EVAL_STATUS_UPDATE_DATA_RID
 IMPLEMENTATION_DATA_RID
 IMPLEMENTATION_STATUS_UPDATE_DATA_RID
+
+# Required only if Scarab automation owns the aar-data upload.
+AAR_DATA_RID
 ```
 
 ---
@@ -151,6 +155,7 @@ The current Vantage datasets and RIDs from the Vantage schema export are:
 | `tech-eval-status-update-data` | `ri.foundry.main.dataset.d4643d15-6617-4d2a-b8c1-471703d113b8` |
 | `implementation-data` | `ri.foundry.main.dataset.eb747c3f-2055-4a87-9a4d-26ef73d1e6e6` |
 | `implementation-status-update-data` | `ri.foundry.main.dataset.cc4b771a-8979-4ae3-939b-80111d6d1553` |
+| `aar-data` | `ri.foundry.main.dataset.d09f72a0-b360-4a49-9638-daf48df769bb` |
 
 Recommended table intent:
 
@@ -165,6 +170,7 @@ Recommended table intent:
 | `tech-eval-status-update-data` | Many rows per ticket | Status update history for technical evaluation. |
 | `implementation-data` | One row per ticket when implementation fields exist | Implementation summary, solution, obstacles, lessons learned, and applicability fields. |
 | `implementation-status-update-data` | Many rows per ticket | Status update history for implementation. |
+| `aar-data` | One row per ticket when AAR fields exist | After Action Report schedule, policy/process, skills, roles, AI/ML potential, strategic alignment, and notes fields. |
 
 ---
 
@@ -185,11 +191,12 @@ Recommended current upload order:
 | 7 | `spear.get_tech_eval_status_update_data(ticket_ids=ticket_data["Ticket ID"])` | `tech-eval-status-update-data.csv` | `TECH_EVAL_STATUS_UPDATE_DATA_RID` | `tech-eval-status-update-data` |
 | 8 | `spear.get_implementation_data(ticket_ids=ticket_data["Ticket ID"])` | `implementation-data.csv` | `IMPLEMENTATION_DATA_RID` | `implementation-data` |
 | 9 | `spear.get_implementation_status_update_data(ticket_ids=ticket_data["Ticket ID"])` | `implementation-status-update-data.csv` | `IMPLEMENTATION_STATUS_UPDATE_DATA_RID` | `implementation-status-update-data` |
+| 10 | AAR source workflow / `spear.get_aar_data(...)` if implemented | `aar-data.csv` | `AAR_DATA_RID` if Scarab-owned | `aar-data` |
 
 Conceptually:
 
 ```text
-SPEAR dashboard + ticket detail pages + activity/status endpoints or tables
+SPEAR dashboard + ticket detail pages + activity/status/AAR endpoints or tables
         ↓
 SpearClient extraction methods
         ↓
@@ -199,6 +206,22 @@ CSV upload through VantageClient
         ↓
 Vantage datasets
 ```
+
+### 5.1 Current `gl-issues` Transform Consumption Notes
+
+The downstream Vantage transform currently consumes ten source datasets and creates the GitLab-ready `gl-issues` table.
+
+Recent transform updates added:
+
+| Output column | Source dataset | Purpose |
+|---|---|---|
+| `tech_eval_updates_json` | `tech-eval-status-update-data` | Preserves full technical evaluation status update history as a JSON array. |
+| `implementation_updates_json` | `implementation-status-update-data` | Preserves full implementation status update history as a JSON array. |
+| `aar_scheduled_date` and six additional `aar_*` columns | `aar-data` | Carries structured AAR data into `gl-issues`. |
+
+The two status update JSON arrays are sorted deterministically with `sort_array(asc=True)` over `struct(date, status, notes)`. This guarantees ascending date-level order. Same-day records are sorted deterministically by status and notes, but that is not true source chronology because the source schemas do not yet include a sequence, timestamp, or source row order field.
+
+The new status-history and AAR columns are excluded from `content_hash` in the current transform state. This avoids unnecessary Heather/GitLab update churn until Heather is updated to render these fields.
 
 ---
 
@@ -698,11 +721,57 @@ T.StructType([
 
 ---
 
-## 15. Active Schema Summary
+## 15. `aar-data` Mapping
+
+### 15.1 Purpose
+
+`aar-data` stores After Action Report fields associated with a ticket. It is a one-row-per-ticket source table used by the `gl-issues` transform to append structured AAR columns to the GitLab-ready output.
+
+### 15.2 Current source behavior
+
+The current Vantage transform validates `aar-data` as one row per `Ticket_ID` before joining it into `gl-issues`. The join is a left join so tickets without AAR data remain in the output with empty AAR strings.
+
+### 15.3 Current Vantage schema
+
+```python
+T.StructType([
+    T.StructField('Ticket_ID', T.IntegerType(), False),
+    T.StructField('Date_After_Action_Report_AAR_Scheduled', T.DateType(), False),
+    T.StructField('Policy_and_Process_Improvements', T.StringType(), False),
+    T.StructField('Skills_Needed', T.StringType(), False),
+    T.StructField('Roles_Needed', T.StringType(), False),
+    T.StructField('AIML_Potential', T.StringType(), False),
+    T.StructField('Strategic_Alignment', T.StringType(), False),
+    T.StructField('Notes', T.StringType(), False)
+])
+```
+
+### 15.4 Current source-to-target mapping
+
+| SPEAR/source label | Dataframe column | Vantage column | `gl-issues` output column | Notes |
+|---|---|---|---|---|
+| Ticket ID passed from `ticket-data` | `Ticket ID` | `Ticket_ID` | Join key only | Parent ticket identifier. |
+| `Date After Action Report AAR Scheduled` | `Date After Action Report AAR Scheduled` | `Date_After_Action_Report_AAR_Scheduled` | `aar_scheduled_date` | Transform formats as `yyyy-MM-dd`; empty string when absent. |
+| `Policy and Process Improvements` | `Policy and Process Improvements` | `Policy_and_Process_Improvements` | `aar_policy_process_improvements` | Empty string when absent. |
+| `Skills Needed` | `Skills Needed` | `Skills_Needed` | `aar_skills_needed` | Empty string when absent. |
+| `Roles Needed` | `Roles Needed` | `Roles_Needed` | `aar_roles_needed` | Empty string when absent. |
+| `AIML Potential` | `AIML Potential` | `AIML_Potential` | `aar_aiml_potential` | Empty string when absent. |
+| `Strategic Alignment` | `Strategic Alignment` | `Strategic_Alignment` | `aar_strategic_alignment` | Empty string when absent. |
+| `Notes` | `Notes` | `Notes` | `aar_notes` | Empty string when absent. |
+
+### 15.5 Transform notes
+
+The `gl-issues` transform appends the seven AAR output columns as columns 40-46. The original 39 columns remain unchanged in name, type, and order.
+
+`INCLUDE_AAR_IN_CONTENT_HASH` currently defaults to `False`, so AAR fields are not part of `content_hash`. This is the safe rollout state because Heather has not yet been updated to render AAR fields in GitLab. When Heather rendering is ready, the transform switch can be changed to `True` as part of a coordinated deployment.
+
+---
+
+## 16. Active Schema Summary
 
 This section is the quick reference for all active Vantage schemas.
 
-### 15.1 `wec-data`
+### 16.1 `wec-data`
 
 ```python
 T.StructType([
@@ -716,7 +785,7 @@ T.StructType([
 ])
 ```
 
-### 15.2 `ticket-data`
+### 16.2 `ticket-data`
 
 ```python
 T.StructType([
@@ -748,7 +817,7 @@ T.StructType([
 ])
 ```
 
-### 15.3 `tech-eval-status-update-data`
+### 16.3 `tech-eval-status-update-data`
 
 ```python
 T.StructType([
@@ -759,7 +828,7 @@ T.StructType([
 ])
 ```
 
-### 15.4 `tech-eval-data`
+### 16.4 `tech-eval-data`
 
 ```python
 T.StructType([
@@ -771,7 +840,7 @@ T.StructType([
 ])
 ```
 
-### 15.5 `tag-data`
+### 16.5 `tag-data`
 
 ```python
 T.StructType([
@@ -780,7 +849,7 @@ T.StructType([
 ])
 ```
 
-### 15.6 `implementation-status-update-data`
+### 16.6 `implementation-status-update-data`
 
 ```python
 T.StructType([
@@ -791,7 +860,7 @@ T.StructType([
 ])
 ```
 
-### 15.7 `implementation-data`
+### 16.7 `implementation-data`
 
 ```python
 T.StructType([
@@ -805,7 +874,7 @@ T.StructType([
 ])
 ```
 
-### 15.8 `contact-data`
+### 16.8 `contact-data`
 
 ```python
 T.StructType([
@@ -819,7 +888,7 @@ T.StructType([
 ])
 ```
 
-### 15.9 `activity-data`
+### 16.9 `activity-data`
 
 ```python
 T.StructType([
@@ -832,9 +901,24 @@ T.StructType([
 ])
 ```
 
+### 16.10 `aar-data`
+
+```python
+T.StructType([
+    T.StructField('Ticket_ID', T.IntegerType(), False),
+    T.StructField('Date_After_Action_Report_AAR_Scheduled', T.DateType(), False),
+    T.StructField('Policy_and_Process_Improvements', T.StringType(), False),
+    T.StructField('Skills_Needed', T.StringType(), False),
+    T.StructField('Roles_Needed', T.StringType(), False),
+    T.StructField('AIML_Potential', T.StringType(), False),
+    T.StructField('Strategic_Alignment', T.StringType(), False),
+    T.StructField('Notes', T.StringType(), False)
+])
+```
+
 ---
 
-## 16. Tables Visible But Not Clearly Captured By Current Active Schemas
+## 17. Tables Visible But Not Clearly Captured By Current Active Schemas
 
 The field coverage report found the following recurring ticket-page tables.
 
@@ -854,19 +938,22 @@ Actions columns are UI button/action columns and should be skipped if these tabl
 | `status-updates-table` | `Date`, `Status`, `Notes`, `Actions` | Covered by `tech-eval-status-update-data` when used for technical evaluation status updates. `Actions` should be skipped. |
 | `implementation-team-table` | `Team Member Name`, `Organization`, `LCAT`, `Actions` | Not present in the current active Vantage schema export. |
 | `implementation-status-updates-table` | `Date`, `Status`, `Notes`, `Actions` | Covered by `implementation-status-update-data`. `Actions` should be skipped. |
-| `aar-notes-table` | `Date`, `Notes`, `Actions` | Not present in the current active Vantage schema export. |
+| `aar-notes-table` | `Date`, `Notes`, `Actions` | Related AAR coverage now exists through active `aar-data`; confirm whether this UI table is the same source before changing scraper logic. `Actions` should be skipped. |
 
 ---
 
-## 17. Current Notable Schema Changes From Previous Version
+## 18. Current Notable Schema Changes From Previous Version
 
 The important updates from the previous mapping document are:
 
-1. `ticket-data` now includes `Connection_Direction` as an active schema field, placed between `Data_Classification` and `Purpose_for_Connection`.
-2. `contact-data.Ticket_ID` is now documented as `IntegerType`, matching the current Vantage schema.
-3. `tech-eval-data` is now an active Vantage dataset.
-4. `tech-eval-status-update-data` is now an active Vantage dataset.
-5. `implementation-data` is now an active Vantage dataset.
-6. `implementation-status-update-data` is now an active Vantage dataset.
-7. AAR notes, intake interviews, tech interviews, and implementation team rows are still not present in the current active Vantage schema export.
+1. `ticket-data` includes `Connection_Direction` as an active schema field, placed between `Data_Classification` and `Purpose_for_Connection`.
+2. `contact-data.Ticket_ID` is documented as `IntegerType`, matching the current Vantage schema.
+3. `tech-eval-data` is an active Vantage dataset.
+4. `tech-eval-status-update-data` is an active Vantage dataset and is now preserved in `gl-issues.tech_eval_updates_json`.
+5. `implementation-data` is an active Vantage dataset.
+6. `implementation-status-update-data` is an active Vantage dataset and is now preserved in `gl-issues.implementation_updates_json`.
+7. `aar-data` is now an active Vantage source dataset and is appended to `gl-issues` as seven AAR columns.
+8. `gl-issues` now has 46 columns total: 37 original columns, 2 status-history JSON columns, and 7 AAR columns.
+9. The status-history JSON arrays are deterministically sorted by date, with same-day tiebreaks by status and notes because no source sequence/timestamp exists yet.
+10. Intake interviews, tech interviews, and implementation team rows are still not present in the current active Vantage schema export.
 

@@ -2,7 +2,7 @@
 
 **Project:** Army Data Operations Center (ADOC)  
 **Cell:** Data Management Cell (DMC)  
-**Status:** Working project reference
+**Status:** Working project reference — updated 2026-07-01
 **Scope:** ADOC cell structure, DMC mission, documentation expectations, Scarab/Vantage/Heather/Gandalf workflow, Vantage dataset reference, operational notes, and open items.
 
 ---
@@ -114,6 +114,7 @@ tech-eval-data.csv
 tech-eval-status-update-data.csv
 implementation-data.csv
 implementation-status-update-data.csv
+aar-data.csv
 ```
 
 ### 6.3 Scarab Source-of-Truth Mapping
@@ -137,6 +138,58 @@ gl-issues
 ```
 
 The `gl-issues` table is the handoff point between the Vantage data layer and Heather.
+
+### 7.1 Current `gl-issues` Transform State
+
+The current `gl-issues` transform output is now a 46-column, one-row-per-ticket table:
+
+```text
+Original GitLab-ready ticket columns: 37
+Status update history columns:        2
+AAR columns:                          7
+Total columns:                        46
+```
+
+The two status update history columns are:
+
+```text
+tech_eval_updates_json
+implementation_updates_json
+```
+
+Both columns preserve historical status updates as JSON arrays using this structure:
+
+```json
+[
+  {
+    "date": "YYYY-MM-DD",
+    "status": "...",
+    "notes": "..."
+  }
+]
+```
+
+The arrays are deterministically sorted with `sort_array(asc=True)` over `struct(date, status, notes)`. This guarantees ascending date-level order across builds. When multiple updates have the same date, the order is deterministic but not source-faithful because the source tables do not currently contain a sequence number, timestamp, or source row order field.
+
+The seven AAR columns are appended as columns 40-46:
+
+```text
+aar_scheduled_date
+aar_policy_process_improvements
+aar_skills_needed
+aar_roles_needed
+aar_aiml_potential
+aar_strategic_alignment
+aar_notes
+```
+
+The AAR source is `aar-data`, located at:
+
+```text
+/Army_NIPR/ADOC/data/tickets/aar-data
+```
+
+AAR fields are available in `gl-issues`, but Heather has not been changed to render them yet. `INCLUDE_AAR_IN_CONTENT_HASH` is set to `False` for the safe initial rollout, and the new status-history/AAR columns are excluded from `content_hash` to avoid unnecessary Heather/GitLab update churn.
 
 ---
 
@@ -334,7 +387,9 @@ Human review gates are required to preserve accuracy, security, quality, and acc
 
 ### 9.3 AAR Auto-Population Note
 
-Gandalf makes AAR as well. 
+AAR source fields are now present in the transformed `gl-issues` table. They are structured data fields, not rendered GitLab markdown. Heather must be updated separately before AAR content appears in the Heather-managed GitLab issue description. Once Heather can render the AAR section, the transform switch `INCLUDE_AAR_IN_CONTENT_HASH` can be changed to `True` as part of a coordinated deployment.
+
+Gandalf can use high-quality closed GitLab issues, AAR-relevant comments, and future rendered AAR sections to create lessons learned, recommendations, EXSUMs, and white-paper content.
 
 ---
 

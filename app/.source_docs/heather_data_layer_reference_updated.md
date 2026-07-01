@@ -2,7 +2,7 @@
 
 **Project:** ADOC / DMC Automation Pipeline  
 **Component:** Heather — GitLab synchronization agent  
-**Scope:** The three Vantage datasets Heather depends on, their schemas, field relationships, Heather operating behavior, and idempotency rules.  
+**Scope:** The three Vantage datasets Heather depends on, the current 46-column `gl-issues` schema, field relationships, Heather operating behavior, and idempotency rules.  
 **Companion document:** `adoc_project_context.md` captures the larger ADOC mission and pipeline context. This document adds dataset-level detail.
 
 ---
@@ -134,6 +134,15 @@ Every Heather-tracked GitLab issue should include this hidden marker in the issu
 | 35 | `comment_count` | Long | Number of MCSC/SPEAR source comments. |
 | 36 | `contacts_json` | String | JSON array of contacts. Empty value is `[]`. |
 | 37 | `metadata_json` | String | JSON object for additional metadata. Empty value is `{}`. |
+| 38 | `tech_eval_updates_json` | String | JSON array of technical evaluation status update history. Empty value is `[]`. |
+| 39 | `implementation_updates_json` | String | JSON array of implementation status update history. Empty value is `[]`. |
+| 40 | `aar_scheduled_date` | String | AAR scheduled date formatted as `yyyy-MM-dd`; empty string when not present. |
+| 41 | `aar_policy_process_improvements` | String | AAR policy/process improvement notes; empty string when not present. |
+| 42 | `aar_skills_needed` | String | AAR skills-needed notes; empty string when not present. |
+| 43 | `aar_roles_needed` | String | AAR roles-needed notes; empty string when not present. |
+| 44 | `aar_aiml_potential` | String | AAR AI/ML potential notes; empty string when not present. |
+| 45 | `aar_strategic_alignment` | String | AAR strategic-alignment notes; empty string when not present. |
+| 46 | `aar_notes` | String | AAR notes; empty string when not present. |
 
 ### 4.2 `comments_json` Shape
 
@@ -159,9 +168,67 @@ Expected element shape:
 
 It does not include fields that should not independently trigger content updates, such as `title`, `external_key`, `source_system`, `source_ticket_id`, `ticket_id`, timestamps, `comment_count`, `metadata_json`, or `content_hash` itself.
 
+The current transform also excludes `tech_eval_updates_json`, `implementation_updates_json`, and the seven AAR columns from `content_hash`. This is intentional because Heather has not yet been updated to render these new fields in GitLab. Including them now would create Heather update churn without a visible managed-block change. When Heather is updated to render status timelines and/or AAR sections, the matching fields should be added to `content_hash` as part of the same coordinated deployment.
+
 ### 4.4 `contacts_json`
 
 `gl-issues.contacts_json` stores contact records from the source ticket. Heather renders the first contact with `type = "Alternate Point of Contact"` as `Alt. POC` in the `Ticket Information` section. Contacts with `type = "Stakeholder"` are rendered in a separate `Stakeholders` section. Other contact types are currently ignored by the GitLab issue renderer.
+
+### 4.5 Status Update History JSON Fields
+
+`gl-issues.tech_eval_updates_json` and `gl-issues.implementation_updates_json` preserve historical status update records that previously were reduced to one latest row per ticket.
+
+Both fields use this JSON array shape:
+
+```json
+[
+  {
+    "date": "YYYY-MM-DD",
+    "status": "...",
+    "notes": "..."
+  }
+]
+```
+
+Null values are normalized to an empty JSON array string:
+
+```text
+[]
+```
+
+The Vantage transform sorts these arrays with `sort_array(asc=True)` over a struct ordered as `date`, `status`, then `notes`. This makes the output stable and reproducible across builds:
+
+```text
+Primary sort:   date ascending
+Tiebreak 1:     status ascending alphabetically
+Tiebreak 2:     notes ascending alphabetically
+```
+
+This provides deterministic date-level ordering. It does not prove true same-day chronology because the source status update tables only contain `Ticket_ID`, `Date`, `Status`, and `Notes`. A future upstream field such as `Status_Update_Sequence`, `Status_Update_Timestamp`, or `Source_Row_Order` is required for source-faithful same-day ordering.
+
+### 4.6 AAR Fields
+
+The Vantage transform now joins the `aar-data` source table into `gl-issues` and appends seven AAR columns. The source dataset is:
+
+| Dataset | Path | RID |
+|---|---|---|
+| `aar-data` | `/Army_NIPR/ADOC/data/tickets/aar-data` | `ri.foundry.main.dataset.d09f72a0-b360-4a49-9638-daf48df769bb` |
+
+Source-to-output mapping:
+
+| Source field | `gl-issues` column | Output behavior |
+|---|---|---|
+| `Date_After_Action_Report_AAR_Scheduled` | `aar_scheduled_date` | Formatted as `yyyy-MM-dd`; empty string when absent. |
+| `Policy_and_Process_Improvements` | `aar_policy_process_improvements` | Empty string when absent. |
+| `Skills_Needed` | `aar_skills_needed` | Empty string when absent. |
+| `Roles_Needed` | `aar_roles_needed` | Empty string when absent. |
+| `AIML_Potential` | `aar_aiml_potential` | Empty string when absent. |
+| `Strategic_Alignment` | `aar_strategic_alignment` | Empty string when absent. |
+| `Notes` | `aar_notes` | Empty string when absent. |
+
+AAR content is not mixed into `gl-issues.description`. The description contract remains clean source narrative text only. Heather must be updated separately before these AAR fields are rendered into the Heather-managed GitLab issue description.
+
+The transform switch `INCLUDE_AAR_IN_CONTENT_HASH` currently defaults to `False`. It should remain `False` until Heather can render the AAR fields. After Heather is updated and tested, the switch can be changed to `True` in a coordinated deployment so AAR changes become part of the source-content hash.
 
 ---
 
@@ -311,6 +378,8 @@ Heather updates this managed section when the source-content hash changes. Human
 The top rendered sections are `Ticket Information` and, when `contacts_json` contains stakeholder records, `Stakeholders`. `Ticket Information` includes Customer, Alt. POC, Organization, Stage, and `ADOC Assigned` from the MCSC/SPEAR assignee field.
 
 Heather does not render a visible `Ticket ID` row because the ticket number is already represented in the GitLab issue title. `gl-issues.description` must be clean purpose/source narrative text and cannot contain Heather-generated output. When AI helpers are enabled, Heather Transcription QA and Heather Comment Digest should appear immediately after `Meeting Notes`.
+
+The current Vantage transform exposes status history and AAR fields as structured columns, but Heather behavior is unchanged until Heather code is updated. Heather should not render AAR/status timeline content accidentally from `description`; any future rendering should be explicit, field-based, and inside the Heather-managed description block.
 
 ### 7.4 Heather-Managed Source Comment Note
 
