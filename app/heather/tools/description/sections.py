@@ -228,7 +228,6 @@ def build_empty_mcsc_fields_notice(field_labels: list[str]) -> str:
     return "\n".join(
         [
             f"> {MCSC_EMPTY_FIELDS_MESSAGE}",
-            ">",
             *[
                 f"> - {format_markdown_table_cell(field_label)}"
                 for field_label in field_labels
