@@ -1,14 +1,8 @@
-# Standard library imports.
-from re import escape, search
-
 # Local imports.
 from constants import HEATHER_MANAGED_END_MARKER, HEATHER_MANAGED_START_MARKER
 from tools.description.hashing import get_source_content_hash
 from tools.description.markers import get_content_hash_marker, get_external_key_marker
-from tools.description.sections import (
-    INTAKE_MEETING_NOTES_HEADING,
-    format_source_description,
-)
+from tools.description.sections import format_source_description
 
 def build_issue_description(
     gl_issue_row: dict,
@@ -56,14 +50,9 @@ def build_managed_description_body(
     managed_body_parts = [get_content_hash_marker(content_hash=content_hash)]
 
     if source_description != "":
-        managed_body_parts.append(
-            insert_generated_sections_after_meeting_notes(
-                source_description=source_description,
-                generated_sections=generated_sections,
-            )
-        )
-    else:
-        managed_body_parts.extend(generated_sections)
+        managed_body_parts.append(source_description)
+
+    managed_body_parts.extend(generated_sections)
 
     return "\n\n---\n\n".join(managed_body_parts).strip()
 
@@ -78,71 +67,6 @@ def get_generated_description_sections(
         generated_sections.append(str(ai_comment_digest).strip())
 
     return generated_sections
-
-def insert_generated_sections_after_meeting_notes(
-    source_description: str, generated_sections: list[str]
-) -> str:
-    """Places generated helper sections immediately after meeting notes."""
-
-    description = str(source_description or "").strip()
-    generated_body = "\n\n---\n\n".join(
-        section.strip() for section in generated_sections if section.strip() != ""
-    )
-    meeting_notes_heading_pattern = escape(INTAKE_MEETING_NOTES_HEADING)
-
-    if description == "" or generated_body == "":
-        return description
-
-    heading_match = search(
-        rf"(?im)^\s*#{{1,6}}\s+{meeting_notes_heading_pattern}\s*$",
-        description,
-    )
-
-    if heading_match is not None:
-        return insert_after_markdown_section(
-            source_description=description,
-            section_body_start=heading_match.end(),
-            insertion=generated_body,
-        )
-
-    field_match = search(
-        rf"(?im)^\s*[-*]?\s*\*{{0,2}}"
-        rf"{meeting_notes_heading_pattern}\*{{0,2}}\s*:\s*.*$",
-        description,
-    )
-
-    if field_match is not None:
-        return (
-            description[: field_match.end()]
-            + "\n\n---\n\n"
-            + generated_body
-            + description[field_match.end() :]
-        ).strip()
-
-    return f"{description}\n\n---\n\n{generated_body}".strip()
-
-def insert_after_markdown_section(
-    source_description: str, section_body_start: int, insertion: str
-) -> str:
-    """Inserts text after a markdown section and before the next heading."""
-
-    description = str(source_description or "")
-    next_heading_match = search(
-        r"(?im)^\s*#{1,6}\s+.+$",
-        description[section_body_start:],
-    )
-    insertion_text = f"\n\n---\n\n{insertion}\n\n"
-
-    if next_heading_match is None:
-        return f"{description.rstrip()}{insertion_text}".strip()
-
-    next_heading_start = section_body_start + next_heading_match.start()
-
-    return (
-        description[:next_heading_start].rstrip()
-        + insertion_text
-        + description[next_heading_start:].lstrip()
-    ).strip()
 
 def replace_heather_managed_block(
     existing_description: str,

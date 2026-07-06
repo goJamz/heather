@@ -80,7 +80,7 @@ Description behavior:
 - Heather renders structured `gl-issues` fields into GitLab markdown.
 - `gl-issues.description` is clean purpose text and cannot contain Heather output.
 - Visible `Ticket ID` is not rendered because the ticket number is in the title.
-- Heather Comment Digest is placed immediately after `Intake Inerview Meeting Notes` when present.
+- Heather Comment Digest is placed after the AAR section when present.
 - Authoritative MCSC/SPEAR source comments are stored in one Heather-managed GitLab note, not in the description.
 - Heather's source-comment transcript note is excluded from `heather-gitlab-comments`.
 

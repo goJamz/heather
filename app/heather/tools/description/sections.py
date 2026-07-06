@@ -21,7 +21,7 @@ TICKET_SUMMARY_DETAIL_FIELDS = [
 ]
 MCSC_EMPTY_FIELDS_MESSAGE = "The following fields are empty in MCSC"
 INTAKE_EVAL_HEADING = "Intake Eval"
-INTAKE_MEETING_NOTES_HEADING = "Intake Inerview Meeting Notes"
+INTAKE_MEETING_NOTES_HEADING = "Meeting Notes"
 MEETING_NOTES_EMPTY_MESSAGE = "> Meeting notes are not captured in MCSC."
 NOT_YET_DEFINED = "Not yet defined"
 WEC_FIELDS = [

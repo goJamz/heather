@@ -31,7 +31,7 @@ HEATHER_RENDERED_FIELDS_EXCLUDED_FROM_VANTAGE_HASH = [
 ]
 
 SOURCE_RENDER_FORMAT_VERSION = (
-    "heather-managed-description-v10-remove-transcription-qa"
+    "heather-managed-description-v11-comment-digest-after-aar"
 )
 
 def get_source_content_hash(gl_issue_row: dict) -> str:
