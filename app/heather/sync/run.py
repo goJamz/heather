@@ -24,7 +24,7 @@ from sync.rows import (
     build_state_row,
     get_current_timestamp,
 )
-from tools.ai import get_ai_comment_digest, get_ai_transcription_check
+from tools.ai import get_ai_comment_digest
 from tools.client import get_gitlab_client
 from tools.description import should_refresh_managed_block
 from tools.vantage import get_vantage_client
@@ -32,7 +32,6 @@ from tools.vantage import get_vantage_client
 def run_heather(
     dry_run: bool = False,
     write_vantage: bool = True,
-    use_ai_check: bool = False,
     use_ai_comment_digest: bool = False,
 ) -> None:
     """Runs Heather's deterministic GitLab synchronization workflow."""
@@ -82,9 +81,6 @@ def run_heather(
                     print(f"[DRY RUN] Would create GitLab issue for {external_key}")
                     continue
 
-                ai_transcription_check = get_ai_transcription_check(
-                    gl_issue_row=gl_issue_row, use_ai_check=use_ai_check
-                )
                 ai_comment_digest = get_ai_comment_digest(
                     gl_issue_row=gl_issue_row,
                     use_ai_comment_digest=use_ai_comment_digest,
@@ -92,7 +88,6 @@ def run_heather(
                 gitlab_issue = create_gitlab_issue(
                     gitlab_project=gitlab_project,
                     gl_issue_row=gl_issue_row,
-                    ai_transcription_check=ai_transcription_check,
                     ai_comment_digest=ai_comment_digest,
                 )
                 created_count = created_count + 1
@@ -113,10 +108,6 @@ def run_heather(
                             f"{external_key}"
                         )
                     else:
-                        ai_transcription_check = get_ai_transcription_check(
-                            gl_issue_row=gl_issue_row,
-                            use_ai_check=use_ai_check,
-                        )
                         ai_comment_digest = get_ai_comment_digest(
                             gl_issue_row=gl_issue_row,
                             use_ai_comment_digest=use_ai_comment_digest,
@@ -124,7 +115,6 @@ def run_heather(
                         hydrated_issue = update_gitlab_issue_managed_block(
                             gitlab_issue=hydrated_issue,
                             gl_issue_row=gl_issue_row,
-                            ai_transcription_check=ai_transcription_check,
                             ai_comment_digest=ai_comment_digest,
                         )
                         managed_update_applied = True

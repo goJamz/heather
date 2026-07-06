@@ -80,18 +80,17 @@ Description behavior:
 - Heather renders structured `gl-issues` fields into GitLab markdown.
 - `gl-issues.description` is clean purpose text and cannot contain Heather output.
 - Visible `Ticket ID` is not rendered because the ticket number is in the title.
-- Heather Transcription QA and Heather Comment Digest are placed immediately after `Meeting Notes` when present.
+- Heather Comment Digest is placed immediately after `Intake Inerview Meeting Notes` when present.
 - Authoritative MCSC/SPEAR source comments are stored in one Heather-managed GitLab note, not in the description.
 - Heather's source-comment transcript note is excluded from `heather-gitlab-comments`.
 
 ## Optional AI Hooks
 
-Heather has two optional Azure/OpenAI helpers:
+Heather has one optional Azure/OpenAI helper:
 
-- `--enable-ai-check`: adds a small non-authoritative Heather Transcription QA section.
 - `--enable-ai-comment-digest`: adds a Heather Comment Digest from `comments_json`.
 
-The AI hooks do not make decisions, assign users, change workflow status, or add
+The AI hook does not make decisions, assign users, change workflow status, or add
 facts outside the provided source fields.
 
 ## Environment
@@ -140,7 +139,6 @@ uv sync
 uv run python heather/main.py
 uv run python heather/main.py --dry-run
 uv run python heather/main.py --skip-vantage-write
-uv run python heather/main.py --enable-ai-check
 uv run python heather/main.py --enable-ai-comment-digest
 ```
 

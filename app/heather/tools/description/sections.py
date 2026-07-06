@@ -5,7 +5,6 @@ from re import sub
 SOURCE_DESCRIPTION_HEATHER_OUTPUT_SIGNALS = [
     "<!-- heather:",
     "## Heather Source Metadata",
-    "## Heather Transcription QA",
     "## Heather Comment Digest",
     "## MCSC/SPEAR Source Comments",
 ]
@@ -21,9 +20,12 @@ TICKET_SUMMARY_DETAIL_FIELDS = [
     ("Resolution", "resolution"),
 ]
 MCSC_EMPTY_FIELDS_MESSAGE = "The following fields are empty in MCSC"
+INTAKE_EVAL_HEADING = "Intake Eval"
+INTAKE_MEETING_NOTES_HEADING = "Intake Inerview Meeting Notes"
+MEETING_NOTES_EMPTY_MESSAGE = "> Meeting notes are not captured in MCSC."
 NOT_YET_DEFINED = "Not yet defined"
 WEC_FIELDS = [
-    ("Meeting Notes", "meeting_notes"),
+    (INTAKE_MEETING_NOTES_HEADING, "meeting_notes"),
     ("Roadblocks", "roadblocks"),
     ("Attempted Solutions", "attempted_solutions"),
 ]
@@ -82,7 +84,9 @@ def format_source_description(gl_issue_row: dict) -> str:
     validate_source_description(source_description=raw_source_description)
 
     sections.append(build_ticket_information_section(gl_issue_row=gl_issue_row))
-    sections.append(build_workflow_section("WEC", WEC_FIELDS, gl_issue_row))
+    sections.append(
+        build_workflow_section(INTAKE_EVAL_HEADING, WEC_FIELDS, gl_issue_row)
+    )
     sections.append(
         build_workflow_section(
             "Tech Eval",
@@ -289,7 +293,7 @@ def build_workflow_section(
                 heading=field_heading,
                 field_name=field_name,
                 heading_level=3,
-                fallback=NOT_YET_DEFINED,
+                fallback=get_workflow_field_fallback(field_name=field_name),
             )
         )
 
@@ -297,6 +301,14 @@ def build_workflow_section(
         section_parts.extend(extra_sections)
 
     return "\n\n".join(part for part in section_parts if part != "").strip()
+
+def get_workflow_field_fallback(field_name: str) -> str:
+    """Returns the empty-field fallback for workflow sections."""
+
+    if field_name == "meeting_notes":
+        return MEETING_NOTES_EMPTY_MESSAGE
+
+    return NOT_YET_DEFINED
 
 def build_status_updates_section(
     heading: str,

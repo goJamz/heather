@@ -9,34 +9,6 @@ from langchain.messages import HumanMessage
 from models.azure import get_azure_openai_model
 
 
-AI_TRANSCRIPTION_CHECK_FIELDS = [
-    "external_key",
-    "source_ticket_id",
-    "title",
-    "status",
-    "priority",
-    "customer_org",
-    "location",
-    "category",
-    "mission_priority",
-    "stage",
-    "tags",
-    "technical_requirements",
-    "policies_involved",
-    "decision",
-    "roadblocks",
-    "success_definition",
-    "attempted_solutions",
-    "meeting_notes",
-    "resolution",
-    "solution_implemented",
-    "solution_documentation",
-    "solution_obstacles",
-    "lessons_learned",
-    "solution_applicability",
-    "comment_count",
-]
-
 AI_COMMENT_DIGEST_FIELDS = [
     "external_key",
     "source_ticket_id",
@@ -47,23 +19,6 @@ AI_COMMENT_DIGEST_FIELDS = [
     "comments_json",
     "comment_count",
 ]
-
-
-def get_ai_transcription_check(gl_issue_row: dict, use_ai_check: bool = False) -> str:
-    """Builds a small optional AI QA note without changing source content."""
-    if should_run_ai_check(use_ai_check=use_ai_check) is False:
-        return ""
-
-    try:
-        model = get_azure_openai_model()
-        response = model.invoke(
-            [HumanMessage(content=build_ai_check_prompt(gl_issue_row=gl_issue_row))]
-        )
-        return format_ai_check_response(content=getattr(response, "content", ""))
-    except Exception as error:
-        print(f"[!] Heather AI transcription QA skipped: {error}")
-        return ""
-
 
 def get_ai_comment_digest(
     gl_issue_row: dict, use_ai_comment_digest: bool = False
@@ -94,16 +49,6 @@ def get_ai_comment_digest(
         return ""
 
 
-def should_run_ai_check(use_ai_check: bool = False) -> bool:
-    """Returns whether Heather should call Azure OpenAI for transcription QA."""
-    configured_value = getenv("HEATHER_ENABLE_AI_CHECK", "").lower()
-
-    if use_ai_check is True:
-        return True
-
-    return configured_value in ["1", "true", "yes"]
-
-
 def should_run_ai_comment_digest(use_ai_comment_digest: bool = False) -> bool:
     """Returns whether Heather should call Azure OpenAI for comment digests."""
     configured_value = getenv("HEATHER_ENABLE_AI_COMMENT_DIGEST", "").lower()
@@ -112,31 +57,6 @@ def should_run_ai_comment_digest(use_ai_comment_digest: bool = False) -> bool:
         return True
 
     return configured_value in ["1", "true", "yes"]
-
-
-def build_ai_check_prompt(gl_issue_row: dict) -> str:
-    """Builds a narrow prompt for non-authoritative transcription QA."""
-    reduced_row = {}
-
-    for field_name in AI_TRANSCRIPTION_CHECK_FIELDS:
-        reduced_row[field_name] = gl_issue_row.get(field_name, "")
-
-    return "\n".join(
-        [
-            "You are Heather's AI-assisted transcription QA check.",
-            "Heather is not a ticket summarizer in this mode.",
-            "Do not summarize the ticket.",
-            "Do not rewrite source content. Do not add facts. Do not make decisions.",
-            "Only inspect the provided fields for obvious missing or unclear "
-            "transcription fields.",
-            "Return at most three short markdown bullets.",
-            "If nothing obvious is missing, return exactly: "
-            "- No obvious transcription gaps detected.",
-            "",
-            "Source fields:",
-            dumps(reduced_row, indent=2, ensure_ascii=False),
-        ]
-    )
 
 
 def build_ai_comment_digest_prompt(gl_issue_row: dict) -> str:
@@ -178,24 +98,6 @@ def build_ai_comment_digest_prompt(gl_issue_row: dict) -> str:
             "",
             "Source comment fields:",
             dumps(reduced_row, indent=2, ensure_ascii=False),
-        ]
-    )
-
-
-def format_ai_check_response(content: str) -> str:
-    """Formats the AI response for the Heather-managed issue description block."""
-    cleaned_content = str(content).strip()
-
-    if cleaned_content == "":
-        return ""
-
-    return "\n".join(
-        [
-            "## Heather Transcription QA",
-            "",
-            "> Non-authoritative check. Source fields remain authoritative.",
-            "",
-            cleaned_content,
         ]
     )
 

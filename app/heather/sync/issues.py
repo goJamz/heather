@@ -37,7 +37,6 @@ def find_gitlab_issue_by_external_key(gitlab_project, external_key: str):
 def create_gitlab_issue(
     gitlab_project,
     gl_issue_row: dict,
-    ai_transcription_check: str = "",
     ai_comment_digest: str = "",
 ):
     """Creates one missing GitLab issue from one gl-issues row."""
@@ -54,7 +53,6 @@ def create_gitlab_issue(
     )
     issue_description = build_issue_description(
         gl_issue_row=gl_issue_row,
-        ai_transcription_check=ai_transcription_check,
         ai_comment_digest=ai_comment_digest,
     )
     issue_payload = {
@@ -90,7 +88,6 @@ def get_gitlab_epic_id() -> int | None:
 def update_gitlab_issue_managed_block(
     gitlab_issue,
     gl_issue_row: dict,
-    ai_transcription_check: str = "",
     ai_comment_digest: str = "",
 ):
     """Reconciles source-owned fields on an existing Heather-tracked issue.
@@ -104,7 +101,6 @@ def update_gitlab_issue_managed_block(
     new_description = replace_heather_managed_block(
         existing_description=existing_description,
         gl_issue_row=gl_issue_row,
-        ai_transcription_check=ai_transcription_check,
         ai_comment_digest=ai_comment_digest,
     )
     description_changed = new_description != existing_description

@@ -339,12 +339,11 @@ The main workflow should call `read_table()`, `upload_rows()`, or
 
 ### `tools/ai.py`
 
-Optional Azure/OpenAI helpers.
+Optional Azure/OpenAI helper.
 
 Responsibilities:
 
-- decide whether optional AI checks are enabled by CLI flags or environment
-- build the transcription QA prompt
+- decide whether the optional AI comment digest is enabled by CLI flag or environment
 - build the source comment digest prompt
 - call the Azure OpenAI model
 - format optional markdown sections returned by the model

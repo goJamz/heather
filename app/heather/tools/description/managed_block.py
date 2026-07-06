@@ -1,15 +1,17 @@
 # Standard library imports.
-from re import search
+from re import escape, search
 
 # Local imports.
 from constants import HEATHER_MANAGED_END_MARKER, HEATHER_MANAGED_START_MARKER
 from tools.description.hashing import get_source_content_hash
 from tools.description.markers import get_content_hash_marker, get_external_key_marker
-from tools.description.sections import format_source_description
+from tools.description.sections import (
+    INTAKE_MEETING_NOTES_HEADING,
+    format_source_description,
+)
 
 def build_issue_description(
     gl_issue_row: dict,
-    ai_transcription_check: str = "",
     ai_comment_digest: str = "",
 ) -> str:
     """Builds the full description for a Heather-created issue."""
@@ -18,7 +20,6 @@ def build_issue_description(
     marker = get_external_key_marker(external_key=external_key)
     managed_block = build_managed_description_block(
         gl_issue_row=gl_issue_row,
-        ai_transcription_check=ai_transcription_check,
         ai_comment_digest=ai_comment_digest,
     )
 
@@ -26,14 +27,12 @@ def build_issue_description(
 
 def build_managed_description_block(
     gl_issue_row: dict,
-    ai_transcription_check: str = "",
     ai_comment_digest: str = "",
 ) -> str:
     """Builds only Heather's managed description block."""
 
     managed_body = build_managed_description_body(
         gl_issue_row=gl_issue_row,
-        ai_transcription_check=ai_transcription_check,
         ai_comment_digest=ai_comment_digest,
     )
 
@@ -45,14 +44,12 @@ def build_managed_description_block(
 
 def build_managed_description_body(
     gl_issue_row: dict,
-    ai_transcription_check: str = "",
     ai_comment_digest: str = "",
 ) -> str:
     """Builds the source-owned content Heather may safely refresh."""
 
     source_description = format_source_description(gl_issue_row=gl_issue_row)
     generated_sections = get_generated_description_sections(
-        ai_transcription_check=ai_transcription_check,
         ai_comment_digest=ai_comment_digest,
     )
     content_hash = get_source_content_hash(gl_issue_row=gl_issue_row)
@@ -71,15 +68,11 @@ def build_managed_description_body(
     return "\n\n---\n\n".join(managed_body_parts).strip()
 
 def get_generated_description_sections(
-    ai_transcription_check: str = "",
     ai_comment_digest: str = "",
 ) -> list[str]:
     """Returns generated helper sections in the desired issue-body order."""
 
     generated_sections = []
-
-    if str(ai_transcription_check or "").strip() != "":
-        generated_sections.append(str(ai_transcription_check).strip())
 
     if str(ai_comment_digest or "").strip() != "":
         generated_sections.append(str(ai_comment_digest).strip())
@@ -89,18 +82,19 @@ def get_generated_description_sections(
 def insert_generated_sections_after_meeting_notes(
     source_description: str, generated_sections: list[str]
 ) -> str:
-    """Places generated helper sections immediately after Meeting Notes."""
+    """Places generated helper sections immediately after meeting notes."""
 
     description = str(source_description or "").strip()
     generated_body = "\n\n---\n\n".join(
         section.strip() for section in generated_sections if section.strip() != ""
     )
+    meeting_notes_heading_pattern = escape(INTAKE_MEETING_NOTES_HEADING)
 
     if description == "" or generated_body == "":
         return description
 
     heading_match = search(
-        r"(?im)^\s*#{1,6}\s+Meeting Notes\s*$",
+        rf"(?im)^\s*#{{1,6}}\s+{meeting_notes_heading_pattern}\s*$",
         description,
     )
 
@@ -112,7 +106,8 @@ def insert_generated_sections_after_meeting_notes(
         )
 
     field_match = search(
-        r"(?im)^\s*[-*]?\s*\*{0,2}Meeting Notes\*{0,2}\s*:\s*.*$",
+        rf"(?im)^\s*[-*]?\s*\*{{0,2}}"
+        rf"{meeting_notes_heading_pattern}\*{{0,2}}\s*:\s*.*$",
         description,
     )
 
@@ -152,7 +147,6 @@ def insert_after_markdown_section(
 def replace_heather_managed_block(
     existing_description: str,
     gl_issue_row: dict,
-    ai_transcription_check: str = "",
     ai_comment_digest: str = "",
 ) -> str:
     """Refreshes only Heather's managed block while preserving human content."""
@@ -160,7 +154,6 @@ def replace_heather_managed_block(
     description = str(existing_description or "")
     new_managed_block = build_managed_description_block(
         gl_issue_row=gl_issue_row,
-        ai_transcription_check=ai_transcription_check,
         ai_comment_digest=ai_comment_digest,
     )
     start_index = description.find(HEATHER_MANAGED_START_MARKER)
