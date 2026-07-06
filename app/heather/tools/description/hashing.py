@@ -31,7 +31,7 @@ HEATHER_RENDERED_FIELDS_EXCLUDED_FROM_VANTAGE_HASH = [
 ]
 
 SOURCE_RENDER_FORMAT_VERSION = (
-    "heather-managed-description-v12-top-level-section-headings"
+    "heather-managed-description-v13-section-empty-field-notices"
 )
 
 def get_source_content_hash(gl_issue_row: dict) -> str:

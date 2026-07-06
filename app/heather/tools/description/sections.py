@@ -16,14 +16,13 @@ TICKET_INFORMATION_FIELDS = [
     ("ADOC Assigned", "assignee"),
 ]
 TICKET_SUMMARY_DETAIL_FIELDS = [
+    ("Purpose", "description"),
     ("Success Definition", "success_definition"),
     ("Resolution", "resolution"),
 ]
 MCSC_EMPTY_FIELDS_MESSAGE = "The following fields are empty in MCSC"
 INTAKE_EVAL_HEADING = "Intake Eval"
 INTAKE_MEETING_NOTES_HEADING = "Meeting Notes"
-MEETING_NOTES_EMPTY_MESSAGE = "> Meeting notes are not captured in MCSC."
-NOT_YET_DEFINED = "Not yet defined"
 WEC_FIELDS = [
     (INTAKE_MEETING_NOTES_HEADING, "meeting_notes"),
     ("Roadblocks", "roadblocks"),
@@ -92,12 +91,8 @@ def format_source_description(gl_issue_row: dict) -> str:
             "Tech Eval",
             TECH_EVAL_FIELDS,
             gl_issue_row,
-            extra_sections=[
-                build_status_updates_section(
-                    heading="Technical Evaluation Status Updates",
-                    field_name="tech_eval_updates_json",
-                    gl_issue_row=gl_issue_row,
-                )
+            status_update_fields=[
+                ("Technical Evaluation Status Updates", "tech_eval_updates_json")
             ],
         )
     )
@@ -106,12 +101,8 @@ def format_source_description(gl_issue_row: dict) -> str:
             "Tech Implementation",
             TECH_IMPLEMENTATION_FIELDS,
             gl_issue_row,
-            extra_sections=[
-                build_status_updates_section(
-                    heading="Implementation Status Updates",
-                    field_name="implementation_updates_json",
-                    gl_issue_row=gl_issue_row,
-                )
+            status_update_fields=[
+                ("Implementation Status Updates", "implementation_updates_json")
             ],
         )
     )
@@ -177,7 +168,6 @@ def build_ticket_information_section(gl_issue_row: dict) -> str:
             heading="Purpose",
             field_name="description",
             heading_level=3,
-            fallback=NOT_YET_DEFINED,
         )
     )
     section_parts.append(
@@ -278,37 +268,54 @@ def build_workflow_section(
     heading: str,
     fields: list[tuple[str, str]],
     gl_issue_row: dict,
-    extra_sections: list[str] | None = None,
+    status_update_fields: list[tuple[str, str]] | None = None,
 ) -> str:
     """Builds one top-level workflow section from source fields."""
 
     section_parts = [f"# {heading}"]
+    missing_field_labels = []
+    status_update_sections = []
     field_heading = ""
     field_name = ""
 
     for field_heading, field_name in fields:
+        field_value = get_source_field_text(
+            gl_issue_row=gl_issue_row,
+            field_name=field_name,
+        )
+
+        if field_value == "":
+            missing_field_labels.append(field_heading)
+            continue
+
         section_parts.append(
             build_text_section(
                 gl_issue_row=gl_issue_row,
                 heading=field_heading,
                 field_name=field_name,
                 heading_level=3,
-                fallback=get_workflow_field_fallback(field_name=field_name),
             )
         )
 
-    if extra_sections is not None:
-        section_parts.extend(extra_sections)
+    if status_update_fields is not None:
+        for field_heading, field_name in status_update_fields:
+            status_update_section = build_status_updates_section(
+                heading=field_heading,
+                field_name=field_name,
+                gl_issue_row=gl_issue_row,
+            )
+
+            if status_update_section == "":
+                missing_field_labels.append(field_heading)
+            else:
+                status_update_sections.append(status_update_section)
+
+    section_parts.append(
+        build_empty_mcsc_fields_notice(field_labels=missing_field_labels)
+    )
+    section_parts.extend(status_update_sections)
 
     return "\n\n".join(part for part in section_parts if part != "").strip()
-
-def get_workflow_field_fallback(field_name: str) -> str:
-    """Returns the empty-field fallback for workflow sections."""
-
-    if field_name == "meeting_notes":
-        return MEETING_NOTES_EMPTY_MESSAGE
-
-    return NOT_YET_DEFINED
 
 def build_status_updates_section(
     heading: str,
@@ -345,7 +352,7 @@ def build_status_updates_section(
         )
 
     if len(rows) == 0:
-        return f"### {heading}\n{NOT_YET_DEFINED}"
+        return ""
 
     return "\n".join(
         [
@@ -360,6 +367,7 @@ def build_aar_section(gl_issue_row: dict) -> str:
     """Builds the AAR source-field section from structured gl-issues columns."""
 
     rows = []
+    missing_field_labels = []
     label = ""
     field_name = ""
     field_value = ""
@@ -370,7 +378,8 @@ def build_aar_section(gl_issue_row: dict) -> str:
             field_name=field_name,
         )
         if field_value == "":
-            field_value = NOT_YET_DEFINED
+            missing_field_labels.append(label)
+            continue
 
         rows.append(
             "| "
@@ -380,14 +389,24 @@ def build_aar_section(gl_issue_row: dict) -> str:
             " |"
         )
 
-    return "\n".join(
-        [
-            "# AAR",
-            "| Field | Value |",
-            "| --- | --- |",
-            *rows,
-        ]
+    section_parts = ["# AAR"]
+
+    if len(rows) > 0:
+        section_parts.append(
+            "\n".join(
+                [
+                    "| Field | Value |",
+                    "| --- | --- |",
+                    *rows,
+                ]
+            )
+        )
+
+    section_parts.append(
+        build_empty_mcsc_fields_notice(field_labels=missing_field_labels)
     )
+
+    return "\n\n".join(part for part in section_parts if part != "").strip()
 
 def get_alternate_point_of_contact(gl_issue_row: dict) -> str:
     """Returns the first alternate point of contact from contacts_json."""
