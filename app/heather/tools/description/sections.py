@@ -20,7 +20,7 @@ TICKET_SUMMARY_DETAIL_FIELDS = [
     ("Success Definition", "success_definition"),
     ("Resolution", "resolution"),
 ]
-MCSC_EMPTY_FIELDS_MESSAGE = "The following fields are empty in MCSC."
+MCSC_EMPTY_FIELDS_MESSAGE = "The following fields are empty in MCSC"
 NOT_YET_DEFINED = "Not yet defined"
 WEC_FIELDS = [
     ("Meeting Notes", "meeting_notes"),
@@ -225,14 +225,8 @@ def build_empty_mcsc_fields_notice(field_labels: list[str]) -> str:
     if len(field_labels) == 0:
         return ""
 
-    return "\n".join(
-        [
-            f"> {MCSC_EMPTY_FIELDS_MESSAGE}",
-            *[
-                f"> - {format_markdown_table_cell(field_label)}"
-                for field_label in field_labels
-            ],
-        ]
+    return "> " + MCSC_EMPTY_FIELDS_MESSAGE + ": " + ", ".join(
+        format_markdown_table_cell(field_label) for field_label in field_labels
     )
 
 def build_stakeholders_section(gl_issue_row: dict) -> str:
