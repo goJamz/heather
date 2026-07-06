@@ -765,7 +765,7 @@ T.StructType([
 
 The `gl-issues` transform appends the seven AAR output columns as columns 40-46. The original 39 columns remain unchanged in name, type, and order.
 
-`INCLUDE_AAR_IN_CONTENT_HASH` currently defaults to `False`, so AAR fields are not part of `content_hash`. This is the safe rollout state because Heather has not yet been updated to render AAR fields in GitLab. When Heather rendering is ready, the transform switch can be changed to `True` as part of a coordinated deployment. That future Heather rendering should faithfully display these structured source fields; any AI-generated lesson, recommendation, EXSUM, white paper, or synthesized AAR content belongs downstream in the Gandalf knowledge workflow.
+`INCLUDE_AAR_IN_CONTENT_HASH` currently defaults to `False`, so AAR fields are not part of the Vantage-owned `content_hash`. Heather now renders the AAR fields in GitLab and mixes those rendered fields into her own managed-description hash. The transform switch can be changed to `True` later in a coordinated deployment if Vantage should own AAR changes directly in `content_hash`. Heather rendering should faithfully display these structured source fields; any AI-generated lesson, recommendation, EXSUM, white paper, or synthesized AAR content belongs downstream in the Gandalf knowledge workflow.
 
 ---
 

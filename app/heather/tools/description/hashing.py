@@ -18,9 +18,20 @@ NON_SYNC_TRIGGER_FIELDS = [
     "comment_count",
     "metadata_json",
 ]
+HEATHER_RENDERED_FIELDS_EXCLUDED_FROM_VANTAGE_HASH = [
+    "tech_eval_updates_json",
+    "implementation_updates_json",
+    "aar_scheduled_date",
+    "aar_policy_process_improvements",
+    "aar_skills_needed",
+    "aar_roles_needed",
+    "aar_aiml_potential",
+    "aar_strategic_alignment",
+    "aar_notes",
+]
 
 SOURCE_RENDER_FORMAT_VERSION = (
-    "heather-managed-description-v6-ticket-information-and-stakeholders"
+    "heather-managed-description-v7-workflow-sections-status-history-aar"
 )
 
 def get_source_content_hash(gl_issue_row: dict) -> str:
@@ -40,6 +51,11 @@ def get_source_content_hash(gl_issue_row: dict) -> str:
 
     if source_content_hash != "":
         hash_payload["vantage_content_hash"] = source_content_hash
+        for field_name in HEATHER_RENDERED_FIELDS_EXCLUDED_FROM_VANTAGE_HASH:
+            hash_payload[field_name] = normalize_hash_value(
+                value=gl_issue_row.get(field_name, "")
+            )
+
         return sha256(
             dumps(hash_payload, sort_keys=True, ensure_ascii=False).encode("UTF-8")
         ).hexdigest()

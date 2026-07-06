@@ -189,9 +189,9 @@ The AAR source is `aar-data`, located at:
 /Army_NIPR/ADOC/data/tickets/aar-data
 ```
 
-AAR fields are current MCSC/SPEAR source fields. They are available in `gl-issues`, but Heather has not been changed to render them yet. When Heather is updated, her responsibility is to faithfully render those source fields into the Heather-managed GitLab issue description. Heather should not use AI to invent, summarize, or author an AAR from those fields.
+AAR fields are current MCSC/SPEAR source fields. Heather renders them faithfully into the Heather-managed GitLab issue description as source-field transcription. Heather should not use AI to invent, summarize, or author an AAR from those fields.
 
-`INCLUDE_AAR_IN_CONTENT_HASH` is set to `False` for the safe initial rollout, and the new status-history/AAR columns are excluded from `content_hash` to avoid unnecessary Heather/GitLab update churn.
+`INCLUDE_AAR_IN_CONTENT_HASH` is set to `False` in the Vantage transform, so the new status-history/AAR columns remain excluded from the Vantage-owned `content_hash`. Heather mixes those rendered fields into her own managed-description hash so clean issue creation and future managed-block refreshes reflect the visible GitLab output.
 
 ---
 
@@ -389,7 +389,7 @@ Human review gates are required to preserve accuracy, security, quality, and acc
 
 ### 9.3 AAR Source-Field Rendering Note
 
-AAR source fields are now present in the transformed `gl-issues` table because those fields exist in MCSC/SPEAR. They are structured source data fields, not AI-generated AAR text and not rendered GitLab markdown. Heather must be updated separately before AAR source fields appear in the Heather-managed GitLab issue description. Once Heather can render the AAR section, the transform switch `INCLUDE_AAR_IN_CONTENT_HASH` can be changed to `True` as part of a coordinated deployment.
+AAR source fields are present in the transformed `gl-issues` table because those fields exist in MCSC/SPEAR. They are structured source data fields, not AI-generated AAR text. Heather renders them in the Heather-managed GitLab issue description as source-field transcription. The transform switch `INCLUDE_AAR_IN_CONTENT_HASH` can remain `False` while Heather includes these rendered fields in her own managed-description hash.
 
 Gandalf can later use high-quality closed GitLab issues, AAR-relevant comments, and rendered AAR source fields to create lessons learned, recommendations, EXSUMs, and white-paper content. That downstream knowledge generation is separate from Heather's source-field sync role.
 

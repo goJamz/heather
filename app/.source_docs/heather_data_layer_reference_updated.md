@@ -168,7 +168,7 @@ Expected element shape:
 
 It does not include fields that should not independently trigger content updates, such as `title`, `external_key`, `source_system`, `source_ticket_id`, `ticket_id`, timestamps, `comment_count`, `metadata_json`, or `content_hash` itself.
 
-The current transform also excludes `tech_eval_updates_json`, `implementation_updates_json`, and the seven AAR columns from `content_hash`. This is intentional because Heather has not yet been updated to render these new fields in GitLab. Including them now would create Heather update churn without a visible managed-block change. When Heather is updated to render status timelines and/or AAR sections, the matching fields should be added to `content_hash` as part of the same coordinated deployment.
+The current transform also excludes `tech_eval_updates_json`, `implementation_updates_json`, and the seven AAR columns from `content_hash`. Heather renders those fields in GitLab, so Heather mixes them into her own managed-description hash alongside the Vantage-owned `content_hash`. This keeps the visible GitLab output and Heather's refresh marker aligned even while the Vantage transform switch `INCLUDE_AAR_IN_CONTENT_HASH` remains `False`.
 
 ### 4.4 `contacts_json`
 
@@ -226,9 +226,9 @@ Source-to-output mapping:
 | `Strategic_Alignment` | `aar_strategic_alignment` | Empty string when absent. |
 | `Notes` | `aar_notes` | Empty string when absent. |
 
-AAR content is not mixed into `gl-issues.description`. The description contract remains clean source narrative text only. Heather must be updated separately before these AAR fields are rendered into the Heather-managed GitLab issue description. When that happens, Heather should render the structured source fields faithfully; she should not use AI to invent, rewrite, summarize, or author the AAR.
+AAR content is not mixed into `gl-issues.description`. The description contract remains clean source narrative text only. Heather renders these structured AAR source fields separately in the Heather-managed GitLab issue description. Heather should render the structured source fields faithfully; she should not use AI to invent, rewrite, summarize, or author the AAR.
 
-The transform switch `INCLUDE_AAR_IN_CONTENT_HASH` currently defaults to `False`. It should remain `False` until Heather can render the AAR fields. After Heather is updated and tested, the switch can be changed to `True` in a coordinated deployment so AAR changes become part of the source-content hash.
+The transform switch `INCLUDE_AAR_IN_CONTENT_HASH` currently defaults to `False`. Heather compensates by including rendered status-history and AAR fields in her managed-description hash. The transform switch can be changed to `True` later in a coordinated deployment if Vantage should own those fields in `content_hash`.
 
 ---
 
@@ -375,11 +375,38 @@ Heather-generated source content.
 
 Heather updates this managed section when the source-content hash changes. Human-written content outside the managed block is not overwritten by Heather.
 
-The top rendered sections are `Ticket Information` and, when `contacts_json` contains stakeholder records, `Stakeholders`. `Ticket Information` includes Customer, Alt. POC, Organization, Stage, and `ADOC Assigned` from the MCSC/SPEAR assignee field.
+The rendered description follows the current workflow template:
+
+```text
+Ticket Information
+  Stakeholders
+  Purpose
+  Success Definition
+  Resolution
+WEC
+  Meeting Notes
+  Roadblocks
+  Attempted Solutions
+Tech Eval
+  Technical Requirements
+  Policies Involved
+  Decision
+  Technical Evaluation Status Updates
+Tech Implementation
+  Solution Implemented
+  Solution Obstacles
+  Lessons Learned
+  Solution Applicability
+  Implementation Status Updates
+AAR
+  All structured AAR source fields
+```
+
+`Ticket Information` includes Customer, Alt. POC, Organization, Stage, and `ADOC Assigned` from the MCSC/SPEAR assignee field. Missing rendered values use `Not yet defined` where Heather needs to preserve the template shape.
 
 Heather does not render a visible `Ticket ID` row because the ticket number is already represented in the GitLab issue title. `gl-issues.description` must be clean purpose/source narrative text and cannot contain Heather-generated output. When AI helpers are enabled, Heather Transcription QA and Heather Comment Digest should appear immediately after `Meeting Notes`.
 
-The current Vantage transform exposes status history and AAR fields as structured columns, but Heather behavior is unchanged until Heather code is updated. Heather should not render AAR/status timeline content accidentally from `description`; any future rendering should be explicit, field-based, and inside the Heather-managed description block. AAR rendering is source-field transcription into GitLab, not AI AAR generation.
+Heather renders status history and AAR fields explicitly from structured `gl-issues` columns. Heather should not render AAR/status timeline content accidentally from `description`; rendering must remain field-based and inside the Heather-managed description block. AAR rendering is source-field transcription into GitLab, not AI AAR generation.
 
 ### 7.4 Heather-Managed Source Comment Note
 

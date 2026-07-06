@@ -16,21 +16,31 @@ TICKET_INFORMATION_FIELDS = [
     ("Stage", "stage"),
     ("ADOC Assigned", "assignee"),
 ]
-SOURCE_TEXT_SECTIONS = [
-    ("Purpose", "description"),
+NOT_YET_DEFINED = "Not yet defined"
+WEC_FIELDS = [
+    ("Meeting Notes", "meeting_notes"),
+    ("Roadblocks", "roadblocks"),
+    ("Attempted Solutions", "attempted_solutions"),
+]
+TECH_EVAL_FIELDS = [
     ("Technical Requirements", "technical_requirements"),
     ("Policies Involved", "policies_involved"),
     ("Decision", "decision"),
-    ("Roadblocks", "roadblocks"),
-    ("Success Definition", "success_definition"),
-    ("Attempted Solutions", "attempted_solutions"),
-    ("Meeting Notes", "meeting_notes"),
-    ("Resolution", "resolution"),
+]
+TECH_IMPLEMENTATION_FIELDS = [
     ("Solution Implemented", "solution_implemented"),
-    ("Solution Documentation", "solution_documentation"),
     ("Solution Obstacles", "solution_obstacles"),
     ("Lessons Learned", "lessons_learned"),
     ("Solution Applicability", "solution_applicability"),
+]
+AAR_FIELDS = [
+    ("Scheduled Date", "aar_scheduled_date"),
+    ("Policy and Process Improvements", "aar_policy_process_improvements"),
+    ("Skills Needed", "aar_skills_needed"),
+    ("Roles Needed", "aar_roles_needed"),
+    ("AI/ML Potential", "aar_aiml_potential"),
+    ("Strategic Alignment", "aar_strategic_alignment"),
+    ("Notes", "aar_notes"),
 ]
 
 def parse_json_array(value: str) -> list:
@@ -67,24 +77,45 @@ def format_source_description(gl_issue_row: dict) -> str:
     validate_source_description(source_description=raw_source_description)
 
     sections.append(build_ticket_information_section(gl_issue_row=gl_issue_row))
-    sections.append(build_stakeholders_section(gl_issue_row=gl_issue_row))
-
-    for heading, field_name in SOURCE_TEXT_SECTIONS:
-        sections.append(
-            build_text_section(
-                gl_issue_row=gl_issue_row,
-                heading=heading,
-                field_name=field_name,
-            )
+    sections.append(build_workflow_section("WEC", WEC_FIELDS, gl_issue_row))
+    sections.append(
+        build_workflow_section(
+            "Tech Eval",
+            TECH_EVAL_FIELDS,
+            gl_issue_row,
+            extra_sections=[
+                build_status_updates_section(
+                    heading="Technical Evaluation Status Updates",
+                    field_name="tech_eval_updates_json",
+                    gl_issue_row=gl_issue_row,
+                )
+            ],
         )
+    )
+    sections.append(
+        build_workflow_section(
+            "Tech Implementation",
+            TECH_IMPLEMENTATION_FIELDS,
+            gl_issue_row,
+            extra_sections=[
+                build_status_updates_section(
+                    heading="Implementation Status Updates",
+                    field_name="implementation_updates_json",
+                    gl_issue_row=gl_issue_row,
+                )
+            ],
+        )
+    )
+    sections.append(build_aar_section(gl_issue_row=gl_issue_row))
 
     return "\n\n".join(section for section in sections if section != "").strip()
 
 def build_ticket_information_section(gl_issue_row: dict) -> str:
-    """Builds the top ticket summary table from selected source fields."""
+    """Builds the top ticket summary section from selected source fields."""
 
     rows = []
     field_value = ""
+    section_parts = []
 
     for label, field_name in TICKET_INFORMATION_FIELDS:
         if field_name == "alternate_point_of_contact":
@@ -104,17 +135,46 @@ def build_ticket_information_section(gl_issue_row: dict) -> str:
                 " |"
             )
 
-    if len(rows) == 0:
-        return ""
-
-    return "\n".join(
-        [
-            "## Ticket Information",
-            "| Field | Value |",
-            "| --- | --- |",
-            *rows,
-        ]
+    section_parts.append(
+        "\n".join(
+            [
+                "## Ticket Information",
+                "| Field | Value |",
+                "| --- | --- |",
+                *rows,
+            ]
+        )
     )
+    section_parts.append(build_stakeholders_section(gl_issue_row=gl_issue_row))
+    section_parts.append(
+        build_text_section(
+            gl_issue_row=gl_issue_row,
+            heading="Purpose",
+            field_name="description",
+            heading_level=3,
+            fallback=NOT_YET_DEFINED,
+        )
+    )
+    section_parts.append(
+        build_text_section(
+            gl_issue_row=gl_issue_row,
+            heading="Success Definition",
+            field_name="success_definition",
+            heading_level=3,
+            fallback=NOT_YET_DEFINED,
+        )
+    )
+    section_parts.append(
+        build_text_section(
+            gl_issue_row=gl_issue_row,
+            heading="Resolution",
+            field_name="resolution",
+            heading_level=3,
+            fallback=NOT_YET_DEFINED,
+        )
+    )
+
+    return "\n\n".join(part for part in section_parts if part != "").strip()
 
 def build_stakeholders_section(gl_issue_row: dict) -> str:
     """Builds a stakeholders section from contacts_json."""
@@ -146,12 +206,119 @@ def build_stakeholders_section(gl_issue_row: dict) -> str:
         )
 
     if len(rows) == 0:
-        return ""
+        return f"### Stakeholders\n{NOT_YET_DEFINED}"
 
     return "\n".join(
         [
-            "## Stakeholders",
+            "### Stakeholders",
             "| Name | Details |",
+            "| --- | --- |",
+            *rows,
+        ]
+    )
+
+def build_workflow_section(
+    heading: str,
+    fields: list[tuple[str, str]],
+    gl_issue_row: dict,
+    extra_sections: list[str] | None = None,
+) -> str:
+    """Builds one top-level workflow section from source fields."""
+
+    section_parts = [f"## {heading}"]
+    field_heading = ""
+    field_name = ""
+
+    for field_heading, field_name in fields:
+        section_parts.append(
+            build_text_section(
+                gl_issue_row=gl_issue_row,
+                heading=field_heading,
+                field_name=field_name,
+                heading_level=3,
+                fallback=NOT_YET_DEFINED,
+            )
+        )
+
+    if extra_sections is not None:
+        section_parts.extend(extra_sections)
+
+    return "\n\n".join(part for part in section_parts if part != "").strip()
+
+def build_status_updates_section(
+    heading: str,
+    field_name: str,
+    gl_issue_row: dict,
+) -> str:
+    """Builds a markdown table from a status update JSON array field."""
+
+    updates = parse_json_array(value=gl_issue_row.get(field_name, "[]"))
+    rows = []
+    update_date = ""
+    update_status = ""
+    update_notes = ""
+
+    for update in updates:
+        if not isinstance(update, dict):
+            continue
+
+        update_date = str(update.get("date", "")).strip()
+        update_status = str(update.get("status", "")).strip()
+        update_notes = str(update.get("notes", "")).strip()
+
+        if update_date == "" and update_status == "" and update_notes == "":
+            continue
+
+        rows.append(
+            "| "
+            f"{format_markdown_table_cell(update_date)}"
+            " | "
+            f"{format_markdown_table_cell(update_status)}"
+            " | "
+            f"{format_markdown_table_cell(update_notes)}"
+            " |"
+        )
+
+    if len(rows) == 0:
+        return f"### {heading}\n{NOT_YET_DEFINED}"
+
+    return "\n".join(
+        [
+            f"### {heading}",
+            "| Date | Status | Notes |",
+            "| --- | --- | --- |",
+            *rows,
+        ]
+    )
+
+def build_aar_section(gl_issue_row: dict) -> str:
+    """Builds the AAR source-field section from structured gl-issues columns."""
+
+    rows = []
+    label = ""
+    field_name = ""
+    field_value = ""
+
+    for label, field_name in AAR_FIELDS:
+        field_value = get_source_field_text(
+            gl_issue_row=gl_issue_row,
+            field_name=field_name,
+        )
+        if field_value == "":
+            field_value = NOT_YET_DEFINED
+
+        rows.append(
+            "| "
+            f"{format_markdown_table_cell(label)}"
+            " | "
+            f"{format_markdown_table_cell(field_value)}"
+            " |"
+        )
+
+    return "\n".join(
+        [
+            "## AAR",
+            "| Field | Value |",
             "| --- | --- |",
             *rows,
         ]
@@ -210,7 +377,13 @@ def format_markdown_table_cell(value: str) -> str:
 
     return str(value or "").replace("|", "\\|").replace("\n", "<br>")
 
-def build_text_section(gl_issue_row: dict, heading: str, field_name: str) -> str:
+def build_text_section(
+    gl_issue_row: dict,
+    heading: str,
+    field_name: str,
+    heading_level: int = 2,
+    fallback: str = "",
+) -> str:
     """Builds a markdown section from a source text field."""
 
     field_value = get_source_field_text(
@@ -218,9 +391,14 @@ def build_text_section(gl_issue_row: dict, heading: str, field_name: str) -> str
     )
 
     if field_value == "":
+        field_value = fallback
+
+    if field_value == "":
         return ""
 
-    return f"## {heading}\n{field_value}"
+    heading_prefix = "#" * heading_level
+
+    return f"{heading_prefix} {heading}\n{field_value}"
 
 def get_source_field_text(gl_issue_row: dict, field_name: str) -> str:
     """Returns a normalized source field string."""
