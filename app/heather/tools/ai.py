@@ -79,7 +79,7 @@ def build_ai_comment_digest_prompt(gl_issue_row: dict) -> str:
             "Write in simple markdown for a GitLab issue.",
             "Do not wrap the response in a fenced code block.",
             "Return this exact structure:",
-            "## Heather Comment Digest",
+            "# Heather Comment Digest",
             "",
             "> Non-authoritative digest of MCSC/SPEAR source comments. "
             "Comment Timeline, Main Thread, and Follow-up Signals are generated "
@@ -109,12 +109,19 @@ def format_ai_comment_digest_response(content: str) -> str:
     if cleaned_content == "":
         return ""
 
-    if cleaned_content.startswith("## Heather Comment Digest"):
+    if cleaned_content.startswith("# Heather Comment Digest"):
         return cleaned_content
+
+    if cleaned_content.startswith("## Heather Comment Digest"):
+        return cleaned_content.replace(
+            "## Heather Comment Digest",
+            "# Heather Comment Digest",
+            1,
+        )
 
     return "\n".join(
         [
-            "## Heather Comment Digest",
+            "# Heather Comment Digest",
             "",
             "> Non-authoritative digest of MCSC/SPEAR source comments. "
             "Comment Timeline, Main Thread, and Follow-up Signals are generated "

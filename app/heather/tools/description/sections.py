@@ -5,7 +5,7 @@ from re import sub
 SOURCE_DESCRIPTION_HEATHER_OUTPUT_SIGNALS = [
     "<!-- heather:",
     "## Heather Source Metadata",
-    "## Heather Comment Digest",
+    "# Heather Comment Digest",
     "## MCSC/SPEAR Source Comments",
 ]
 TICKET_INFORMATION_FIELDS = [
@@ -148,7 +148,7 @@ def build_ticket_information_section(gl_issue_row: dict) -> str:
     section_parts.append(
         "\n".join(
             [
-                "## Ticket Information",
+                "# Ticket Information",
                 "| Field | Value |",
                 "| --- | --- |",
                 *rows,
@@ -282,7 +282,7 @@ def build_workflow_section(
 ) -> str:
     """Builds one top-level workflow section from source fields."""
 
-    section_parts = [f"## {heading}"]
+    section_parts = [f"# {heading}"]
     field_heading = ""
     field_name = ""
 
@@ -382,7 +382,7 @@ def build_aar_section(gl_issue_row: dict) -> str:
 
     return "\n".join(
         [
-            "## AAR",
+            "# AAR",
             "| Field | Value |",
             "| --- | --- |",
             *rows,
