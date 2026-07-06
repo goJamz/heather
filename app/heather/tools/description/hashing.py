@@ -31,7 +31,7 @@ HEATHER_RENDERED_FIELDS_EXCLUDED_FROM_VANTAGE_HASH = [
 ]
 
 SOURCE_RENDER_FORMAT_VERSION = (
-    "heather-managed-description-v7-workflow-sections-status-history-aar"
+    "heather-managed-description-v8-ticket-empty-field-notice"
 )
 
 def get_source_content_hash(gl_issue_row: dict) -> str:

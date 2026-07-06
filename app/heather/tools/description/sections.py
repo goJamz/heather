@@ -16,6 +16,11 @@ TICKET_INFORMATION_FIELDS = [
     ("Stage", "stage"),
     ("ADOC Assigned", "assignee"),
 ]
+TICKET_SUMMARY_DETAIL_FIELDS = [
+    ("Success Definition", "success_definition"),
+    ("Resolution", "resolution"),
+]
+MCSC_EMPTY_FIELDS_MESSAGE = "The following fields are empty in MCSC."
 NOT_YET_DEFINED = "Not yet defined"
 WEC_FIELDS = [
     ("Meeting Notes", "meeting_notes"),
@@ -116,6 +121,7 @@ def build_ticket_information_section(gl_issue_row: dict) -> str:
     rows = []
     field_value = ""
     section_parts = []
+    stakeholders_section = build_stakeholders_section(gl_issue_row=gl_issue_row)
 
     for label, field_name in TICKET_INFORMATION_FIELDS:
         if field_name == "alternate_point_of_contact":
@@ -145,7 +151,22 @@ def build_ticket_information_section(gl_issue_row: dict) -> str:
             ]
         )
     )
-    section_parts.append(build_stakeholders_section(gl_issue_row=gl_issue_row))
+
+    missing_field_labels = get_missing_ticket_summary_field_labels(
+        gl_issue_row=gl_issue_row,
+        has_stakeholders=stakeholders_section != "",
+    )
+
+    if stakeholders_section == "":
+        section_parts.append(
+            build_empty_mcsc_fields_notice(field_labels=missing_field_labels)
+        )
+    else:
+        section_parts.append(stakeholders_section)
+        section_parts.append(
+            build_empty_mcsc_fields_notice(field_labels=missing_field_labels)
+        )
+
     section_parts.append(
         build_text_section(
             gl_issue_row=gl_issue_row,
@@ -161,7 +182,6 @@ def build_ticket_information_section(gl_issue_row: dict) -> str:
             heading="Success Definition",
             field_name="success_definition",
             heading_level=3,
-            fallback=NOT_YET_DEFINED,
         )
     )
     section_parts.append(
@@ -170,11 +190,51 @@ def build_ticket_information_section(gl_issue_row: dict) -> str:
             heading="Resolution",
             field_name="resolution",
             heading_level=3,
-            fallback=NOT_YET_DEFINED,
         )
     )
 
     return "\n\n".join(part for part in section_parts if part != "").strip()
+
+def get_missing_ticket_summary_field_labels(
+    gl_issue_row: dict,
+    has_stakeholders: bool,
+) -> list[str]:
+    """Returns ticket-summary fields that should appear in the MCSC empty notice."""
+
+    missing_field_labels = []
+    label = ""
+    field_name = ""
+
+    if not has_stakeholders:
+        missing_field_labels.append("Stakeholders")
+
+    for label, field_name in TICKET_SUMMARY_DETAIL_FIELDS:
+        field_value = get_source_field_text(
+            gl_issue_row=gl_issue_row,
+            field_name=field_name,
+        )
+
+        if field_value == "":
+            missing_field_labels.append(label)
+
+    return missing_field_labels
+
+def build_empty_mcsc_fields_notice(field_labels: list[str]) -> str:
+    """Builds the compact notice for missing MCSC ticket-summary fields."""
+
+    if len(field_labels) == 0:
+        return ""
+
+    return "\n".join(
+        [
+            f"> {MCSC_EMPTY_FIELDS_MESSAGE}",
+            ">",
+            *[
+                f"> - {format_markdown_table_cell(field_label)}"
+                for field_label in field_labels
+            ],
+        ]
+    )
 
 def build_stakeholders_section(gl_issue_row: dict) -> str:
     """Builds a stakeholders section from contacts_json."""
@@ -206,7 +266,7 @@ def build_stakeholders_section(gl_issue_row: dict) -> str:
         )
 
     if len(rows) == 0:
-        return f"### Stakeholders\n{NOT_YET_DEFINED}"
+        return ""
 
     return "\n".join(
         [
