@@ -1,0 +1,3 @@
+--index-url https://code.cdso.army.mil/api/v4/projects/16174/packages/pypi/simple
+scarab==0.2.5
+
