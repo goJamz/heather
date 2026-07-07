@@ -5,7 +5,7 @@ from os import getenv, makedirs
 from pathlib import Path
 
 # Third party imports.
-from foundry_sdk import Config, FoundryClient, PalantirRPCException
+from foundry_sdk import Config, FoundryClient, PalantirRPCException, UserTokenAuth
 from foundry_sdk.v1.datasets.models import DatasetRid
 import pandas as pd
 import pyarrow as pa
@@ -40,7 +40,7 @@ class VantageClient:
         self.transaction_type = getenv("FOUNDRY_TRANSACTION_TYPE", "SNAPSHOT")
         self.local_gl_issues_csv = getenv("HEATHER_GL_ISSUES_CSV", "")
         self.local_output_directory = getenv("HEATHER_LOCAL_OUTPUT_DIRECTORY", "")
-        self.client = FoundryClient(config=Config(verify=verify))
+        self.client = self.__build_foundry_client(verify=verify)
         self.session = Session()
 
         if self.token != "":
@@ -227,6 +227,25 @@ class VantageClient:
             return self.hostname.rstrip("/")
 
         return f"https://{self.hostname}".rstrip("/")
+
+    def __build_foundry_client(self, verify: str | bool):
+        if self.hostname == "" or self.token == "":
+            return FoundryClient(config=Config(verify=verify))
+
+        return FoundryClient(
+            auth=UserTokenAuth(token=self.token),
+            hostname=self.__sdk_hostname(),
+            config=Config(verify=verify),
+        )
+
+    def __sdk_hostname(self) -> str:
+        if self.hostname.startswith("https://"):
+            return self.hostname.replace("https://", "", 1).rstrip("/")
+
+        if self.hostname.startswith("http://"):
+            return self.hostname.replace("http://", "", 1).rstrip("/")
+
+        return self.hostname.rstrip("/")
 
     def __validate_remote_configuration(self) -> None:
         if self.hostname == "":

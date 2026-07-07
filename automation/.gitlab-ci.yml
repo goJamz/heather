@@ -1,0 +1,25 @@
+---
+stages:
+  - sync
+
+heather-sync:
+  stage: sync
+  image: registry.cdso.army.mil/cdso/containers/approved-base/python_alpine:3.11
+  timeout: 2h
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - when: never
+  variables:
+    CURL_CA_BUNDLE: /usr/local/share/ca-certificates/dod.crt
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    PYTHONUNBUFFERED: "1"
+    RUNNER_SCRIPT_TIMEOUT: 1h50m
+    RUNNER_AFTER_SCRIPT_TIMEOUT: 5m
+  before_script:
+    - |
+      printf "machine code.cdso.army.mil\nlogin gitlab-ci-token\npassword %s\n" \
+        "${CI_JOB_TOKEN}" > ~/.netrc
+      chmod 600 ~/.netrc
+    - python -m pip install -r requirements.txt
+  script:
+    - python -u main.py
