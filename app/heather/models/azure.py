@@ -9,8 +9,13 @@ from azure.identity import (
 )
 from langchain_openai import AzureChatOpenAI
 
+# Local imports.
+from tools.certs import configure_packaged_ca_bundle
+
 
 def get_azure_openai_model():
+    configure_packaged_ca_bundle()
+
     # Get environment variables.
     AZURE_OPENAI_API_VERSION = environ["AZURE_OPENAI_API_VERSION"]
     AZURE_OPENAI_ENDPOINT = environ["AZURE_OPENAI_ENDPOINT"]

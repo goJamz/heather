@@ -35,4 +35,6 @@ Set these in the `adoc/heather/automation` GitLab project:
 - `HEATHER_FRESHNESS_POLL_SECONDS`
 - `HEATHER_FRESHNESS_TIMEOUT_SECONDS`
 
-`CURL_CA_BUNDLE` is set by the CI job.
+Heather packages the CDSO DoD CA bundle from the app delivery pipeline and uses
+it for Azure credential requests when no explicit runtime CA bundle is set.
+`CURL_CA_BUNDLE` is still set by the CI job for package installation.

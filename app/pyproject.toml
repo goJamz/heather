@@ -14,3 +14,6 @@ dependencies = [
     "python-gitlab>=8.4.0",
     "requests>=2.32.0",
 ]
+
+[tool.setuptools.package-data]
+heather = ["certs/*.pem"]

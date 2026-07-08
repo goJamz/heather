@@ -90,6 +90,16 @@ Heather builds a Heather Comment Digest from `comments_json` when source
 comments are present. The digest does not make decisions, assign users, change
 workflow status, or add facts outside the provided source fields.
 
+Azure/OpenAI failures only skip this optional digest. The deterministic GitLab
+and Vantage sync continues without AI-generated digest content.
+
+The package delivery pipeline builds `heather/certs/cdso-ca-bundle.pem` from the
+CI image trust store and CDSO DoD certificates before publishing Heather to the
+package registry. At runtime, Heather uses that packaged bundle for Azure
+credential requests by filling any unset `SSL_CERT_FILE`,
+`REQUESTS_CA_BUNDLE`, or `CURL_CA_BUNDLE` variables. Set `HEATHER_CA_BUNDLE`
+to use a different bundle.
+
 ## Environment
 
 Required GitLab variables:

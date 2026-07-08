@@ -20,7 +20,9 @@ heather-library:
       when: manual
   variables:
     CURL_CA_BUNDLE: /usr/local/share/ca-certificates/dod.crt
+    HEATHER_REQUIRE_DOD_CERTS: "1"
   script:
     - pip install build twine
+    - python scripts/build_ca_bundle.py
     - python -m build
     - python -m twine upload --verbose --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*

@@ -1,5 +1,7 @@
 # Standard library imports.
+from contextlib import contextmanager
 from json import JSONDecodeError, dumps, loads
+from logging import ERROR, getLogger
 
 # Third party imports.
 from langchain.messages import HumanMessage
@@ -18,6 +20,11 @@ AI_COMMENT_DIGEST_FIELDS = [
     "comments_json",
     "comment_count",
 ]
+AZURE_IDENTITY_LOGGER_NAMES = [
+    "azure.identity",
+    "azure.identity._credentials.chained",
+]
+
 
 def get_ai_comment_digest(gl_issue_row: dict) -> str:
     """Builds an AI digest of only MCSC/SPEAR source comments."""
@@ -25,19 +32,25 @@ def get_ai_comment_digest(gl_issue_row: dict) -> str:
         return ""
 
     try:
-        model = get_azure_openai_model()
-        response = model.invoke(
-            [
-                HumanMessage(
-                    content=build_ai_comment_digest_prompt(gl_issue_row=gl_issue_row)
-                )
-            ]
-        )
+        with suppress_azure_identity_warning_logs():
+            model = get_azure_openai_model()
+            response = model.invoke(
+                [
+                    HumanMessage(
+                        content=build_ai_comment_digest_prompt(
+                            gl_issue_row=gl_issue_row
+                        )
+                    )
+                ]
+            )
         return format_ai_comment_digest_response(
             content=getattr(response, "content", "")
         )
     except Exception as error:
-        print(f"[!] Heather AI source comment digest skipped: {error}")
+        print(
+            "[!] Heather AI source comment digest skipped: "
+            f"{summarize_ai_comment_digest_error(error=error)}"
+        )
         return ""
 
 
@@ -133,6 +146,38 @@ def strip_markdown_code_fence(content: str) -> str:
         return cleaned_content
 
     return "\n".join(lines[1:-1]).strip()
+
+
+@contextmanager
+def suppress_azure_identity_warning_logs():
+    """Keeps optional digest auth failures from duplicating Heather's warning."""
+    loggers = [getLogger(name) for name in AZURE_IDENTITY_LOGGER_NAMES]
+    original_levels = [logger.level for logger in loggers]
+
+    for logger in loggers:
+        logger.setLevel(ERROR)
+
+    try:
+        yield
+    finally:
+        for index, logger in enumerate(loggers):
+            logger.setLevel(original_levels[index])
+
+
+def summarize_ai_comment_digest_error(error: Exception) -> str:
+    """Returns a concise one-line reason for skipping the optional digest."""
+    error_message = str(error or "").strip()
+
+    if "CERTIFICATE_VERIFY_FAILED" in error_message:
+        return (
+            "Azure credential TLS certificate verification failed; confirm the "
+            "container trust store includes the CDSO DoD CA bundle."
+        )
+
+    if error_message == "":
+        return error.__class__.__name__
+
+    return error_message.splitlines()[0].strip()
 
 
 def has_source_comments(gl_issue_row: dict) -> bool:
