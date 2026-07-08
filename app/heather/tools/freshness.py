@@ -4,31 +4,9 @@ from os import getenv
 from time import monotonic, sleep
 
 # Local imports.
-from constants import GL_ISSUES_RID
+from constants import GL_ISSUES_COMPLETION_CHECKER_RID, GL_ISSUES_RID
 from tools.vantage import get_vantage_client
 
-
-UPSTREAM_DATASETS = [
-    ("ticket-data", "ri.foundry.main.dataset.e2c6e35f-ee6a-421b-98fd-09118ea28a7a"),
-    ("tag-data", "ri.foundry.main.dataset.a13f1900-12e2-4134-a444-79b8229f5cd2"),
-    ("contact-data", "ri.foundry.main.dataset.e9a5ada6-79f8-421d-a76d-d185cc471ee6"),
-    ("wec-data", "ri.foundry.main.dataset.ff4265c7-2926-46fe-b4b3-7d7a89cb90e6"),
-    ("activity-data", "ri.foundry.main.dataset.9f374a13-6f3e-4c39-98f1-2872ac1cc5b2"),
-    ("tech-eval-data", "ri.foundry.main.dataset.b75c311b-8dbd-49ca-9f7b-e29f7cf617f0"),
-    (
-        "tech-eval-status-update-data",
-        "ri.foundry.main.dataset.d4643d15-6617-4d2a-b8c1-471703d113b8",
-    ),
-    (
-        "implementation-data",
-        "ri.foundry.main.dataset.eb747c3f-2055-4a87-9a4d-26ef73d1e6e6",
-    ),
-    (
-        "implementation-status-update-data",
-        "ri.foundry.main.dataset.cc4b771a-8979-4ae3-939b-80111d6d1553",
-    ),
-    ("aar-data", "ri.foundry.main.dataset.d09f72a0-b360-4a49-9638-daf48df769bb"),
-]
 
 DEFAULT_POLL_SECONDS = 60
 DEFAULT_TIMEOUT_SECONDS = 2700
@@ -37,7 +15,7 @@ DEFAULT_TIMEOUT_SECONDS = 2700
 def wait_for_fresh_gl_issues(
     poll_seconds: int | None = None, timeout_seconds: int | None = None
 ) -> None:
-    """Waits until gl-issues is newer than every upstream Scarab dataset."""
+    """Waits until gl-issues is newer than the completion-checker dataset."""
     poll_seconds = poll_seconds or get_int_env(
         env_var_name="HEATHER_FRESHNESS_POLL_SECONDS",
         default_value=DEFAULT_POLL_SECONDS,
@@ -57,7 +35,8 @@ def wait_for_fresh_gl_issues(
     print(
         "[*] Waiting for fresh gl-issues: "
         f"branch={branch_name}, poll_seconds={poll_seconds}, "
-        f"timeout_seconds={timeout_seconds}"
+        f"timeout_seconds={timeout_seconds}, "
+        "checker=gl-issues-completion-checker"
     )
 
     while True:
@@ -67,30 +46,17 @@ def wait_for_fresh_gl_issues(
             dataset_rid=GL_ISSUES_RID,
             branch_name=branch_name,
         )
-        upstream_times = get_upstream_transaction_times(
+        checker_time = latest_committed_transaction_time(
             client=foundry_client,
+            dataset_rid=GL_ISSUES_COMPLETION_CHECKER_RID,
             branch_name=branch_name,
         )
-        newest_upstream_name, newest_upstream_time = newest_upstream(
-            upstream_times=upstream_times
-        )
-        missing_dataset_names = [
-            dataset_name
-            for dataset_name, committed_time in upstream_times.items()
-            if committed_time is None
-        ]
 
-        if (
-            gl_time is not None
-            and newest_upstream_time is not None
-            and len(missing_dataset_names) == 0
-            and gl_time > newest_upstream_time
-        ):
+        if gl_time is not None and checker_time is not None and gl_time > checker_time:
             print(
                 "[+] gl-issues is fresh: "
                 f"gl_issues={format_time(gl_time)}, "
-                f"newest_upstream={newest_upstream_name} "
-                f"{format_time(newest_upstream_time)}, "
+                f"checker={format_time(checker_time)}, "
                 f"poll_count={poll_count}"
             )
             return
@@ -100,9 +66,7 @@ def wait_for_fresh_gl_issues(
         print(
             "[*] gl-issues not fresh yet: "
             f"gl_issues={format_time(gl_time)}, "
-            f"newest_upstream={newest_upstream_name} "
-            f"{format_time(newest_upstream_time)}, "
-            f"missing={format_missing_dataset_names(missing_dataset_names)}, "
+            f"checker={format_time(checker_time)}, "
             f"poll_count={poll_count}, "
             f"remaining_seconds={max(remaining_seconds, 0)}"
         )
@@ -111,9 +75,7 @@ def wait_for_fresh_gl_issues(
             raise TimeoutError(
                 "Timed out waiting for fresh gl-issues. "
                 f"gl_issues={format_time(gl_time)}, "
-                f"newest_upstream={newest_upstream_name} "
-                f"{format_time(newest_upstream_time)}, "
-                f"missing={format_missing_dataset_names(missing_dataset_names)}"
+                f"checker={format_time(checker_time)}"
             )
 
         sleep(min(poll_seconds, remaining_seconds))
@@ -134,36 +96,6 @@ def latest_committed_transaction_time(
         return None
 
     return transaction_time(transaction=transaction)
-
-
-def get_upstream_transaction_times(
-    client, branch_name: str
-) -> dict[str, datetime | None]:
-    upstream_times = {}
-
-    for dataset_name, dataset_rid in UPSTREAM_DATASETS:
-        upstream_times[dataset_name] = latest_committed_transaction_time(
-            client=client,
-            dataset_rid=dataset_rid,
-            branch_name=branch_name,
-        )
-
-    return upstream_times
-
-
-def newest_upstream(
-    upstream_times: dict[str, datetime | None]
-) -> tuple[str, datetime | None]:
-    committed_times = [
-        (dataset_name, committed_time)
-        for dataset_name, committed_time in upstream_times.items()
-        if committed_time is not None
-    ]
-
-    if len(committed_times) == 0:
-        return "none", None
-
-    return max(committed_times, key=lambda item: item[1])
 
 
 def transaction_time(transaction) -> datetime | None:
@@ -217,13 +149,6 @@ def format_time(value: datetime | None) -> str:
         return "not ready"
 
     return value.isoformat()
-
-
-def format_missing_dataset_names(dataset_names: list[str]) -> str:
-    if len(dataset_names) == 0:
-        return "none"
-
-    return ", ".join(dataset_names)
 
 
 def get_int_env(env_var_name: str, default_value: int) -> int:

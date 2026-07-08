@@ -3,8 +3,8 @@
 This project is the GitLab CI wrapper for Heather.
 
 The manual pipeline installs Heather from the `adoc/heather/app` package
-registry, waits until `gl-issues` is newer than the 10 upstream Scarab datasets,
-then runs the Heather GitLab sync.
+registry, waits until `gl-issues` is newer than the
+`gl-issues-completion-checker` dataset, then runs the Heather GitLab sync.
 
 ## Manual pipeline
 

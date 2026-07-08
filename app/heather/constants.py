@@ -1,5 +1,8 @@
 # Dataset RIDs.
 GL_ISSUES_RID = "ri.foundry.main.dataset.dd9699c3-69f7-4fb4-be28-853da6071536"
+GL_ISSUES_COMPLETION_CHECKER_RID = (
+    "ri.foundry.main.dataset.d12a2687-2461-49df-adef-1b9fdd6abab6"
+)
 HEATHER_GITLAB_STATE_RID = "ri.foundry.main.dataset.a53196d5-3001-4863-a907-67874dec6b29"
 HEATHER_GITLAB_COMMENTS_RID = "ri.foundry.main.dataset.da001bdc-0d6c-4922-82c4-24b5d111ebf6"
 
