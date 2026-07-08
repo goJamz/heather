@@ -1,6 +1,5 @@
 # Standard library imports.
 from json import JSONDecodeError, dumps, loads
-from os import getenv
 
 # Third party imports.
 from langchain.messages import HumanMessage
@@ -20,15 +19,8 @@ AI_COMMENT_DIGEST_FIELDS = [
     "comment_count",
 ]
 
-def get_ai_comment_digest(
-    gl_issue_row: dict, use_ai_comment_digest: bool = False
-) -> str:
-    """Builds an optional AI digest of only MCSC/SPEAR source comments."""
-    if should_run_ai_comment_digest(
-        use_ai_comment_digest=use_ai_comment_digest
-    ) is False:
-        return ""
-
+def get_ai_comment_digest(gl_issue_row: dict) -> str:
+    """Builds an AI digest of only MCSC/SPEAR source comments."""
     if has_source_comments(gl_issue_row=gl_issue_row) is False:
         return ""
 
@@ -47,16 +39,6 @@ def get_ai_comment_digest(
     except Exception as error:
         print(f"[!] Heather AI source comment digest skipped: {error}")
         return ""
-
-
-def should_run_ai_comment_digest(use_ai_comment_digest: bool = False) -> bool:
-    """Returns whether Heather should call Azure OpenAI for comment digests."""
-    configured_value = getenv("HEATHER_ENABLE_AI_COMMENT_DIGEST", "").lower()
-
-    if use_ai_comment_digest is True:
-        return True
-
-    return configured_value in ["1", "true", "yes"]
 
 
 def build_ai_comment_digest_prompt(gl_issue_row: dict) -> str:

@@ -32,7 +32,6 @@ from tools.vantage import get_vantage_client
 def run_heather(
     dry_run: bool = False,
     write_vantage: bool = True,
-    use_ai_comment_digest: bool = False,
 ) -> None:
     """Runs Heather's deterministic GitLab synchronization workflow."""
 
@@ -81,10 +80,7 @@ def run_heather(
                     print(f"[DRY RUN] Would create GitLab issue for {external_key}")
                     continue
 
-                ai_comment_digest = get_ai_comment_digest(
-                    gl_issue_row=gl_issue_row,
-                    use_ai_comment_digest=use_ai_comment_digest,
-                )
+                ai_comment_digest = get_ai_comment_digest(gl_issue_row=gl_issue_row)
                 gitlab_issue = create_gitlab_issue(
                     gitlab_project=gitlab_project,
                     gl_issue_row=gl_issue_row,
@@ -109,8 +105,7 @@ def run_heather(
                         )
                     else:
                         ai_comment_digest = get_ai_comment_digest(
-                            gl_issue_row=gl_issue_row,
-                            use_ai_comment_digest=use_ai_comment_digest,
+                            gl_issue_row=gl_issue_row
                         )
                         hydrated_issue = update_gitlab_issue_managed_block(
                             gitlab_issue=hydrated_issue,

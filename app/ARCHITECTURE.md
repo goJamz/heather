@@ -339,14 +339,13 @@ The main workflow should call `read_table()`, `upload_rows()`, or
 
 ### `tools/ai.py`
 
-Optional Azure/OpenAI helper.
+Azure/OpenAI helper for Heather Comment Digest generation.
 
 Responsibilities:
 
-- decide whether the optional AI comment digest is enabled by CLI flag or environment
 - build the source comment digest prompt
 - call the Azure OpenAI model
-- format optional markdown sections returned by the model
+- format markdown sections returned by the model
 - degrade gracefully by printing a warning and returning an empty string on AI
   errors
 
@@ -369,7 +368,7 @@ Responsibilities:
 - acquire an Azure credential token
 - construct the `AzureChatOpenAI` client
 
-This module is only needed when optional AI hooks are enabled.
+This module is used when Heather builds the source comment digest.
 
 ### `models/__init__.py`
 
@@ -407,7 +406,7 @@ Maintainers should preserve those boundaries when adding behavior.
 | Change source comment note formatting | `tools/description/source_comments.py` |
 | Change output snapshot columns | `constants.py` and `sync/rows.py` |
 | Change Vantage read/write mechanics | `tools/vantage.py` |
-| Change optional AI prompts | `tools/ai.py` |
+| Change Heather Comment Digest prompts | `tools/ai.py` |
 | Change CLI flags | `main.py`, then pass values into `sync.run` |
 
 ## Verification Commands

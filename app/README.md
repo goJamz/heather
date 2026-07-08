@@ -84,14 +84,11 @@ Description behavior:
 - Authoritative MCSC/SPEAR source comments are stored in one Heather-managed GitLab note, not in the description.
 - Heather's source-comment transcript note is excluded from `heather-gitlab-comments`.
 
-## Optional AI Hooks
+## AI Comment Digest
 
-Heather has one optional Azure/OpenAI helper:
-
-- `--enable-ai-comment-digest`: adds a Heather Comment Digest from `comments_json`.
-
-The AI hook does not make decisions, assign users, change workflow status, or add
-facts outside the provided source fields.
+Heather builds a Heather Comment Digest from `comments_json` when source
+comments are present. The digest does not make decisions, assign users, change
+workflow status, or add facts outside the provided source fields.
 
 ## Environment
 
@@ -120,7 +117,7 @@ export FOUNDRY_VERIFY="false"
 export HEATHER_BOARD_COLUMN_LABELS_JSON='["To Do", "In Progress", "Review", "Blocked", "Done"]'
 ```
 
-Azure/OpenAI variables, when AI hooks are enabled:
+Azure/OpenAI variables:
 
 ```bash
 export AZURE_TENANT_ID="<TENANT ID>"
@@ -139,7 +136,6 @@ uv sync
 uv run python heather/main.py
 uv run python heather/main.py --dry-run
 uv run python heather/main.py --skip-vantage-write
-uv run python heather/main.py --enable-ai-comment-digest
 ```
 
 Local input/output mode:
